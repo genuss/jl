@@ -30,13 +30,13 @@ Build a Rust CLI tool that reads JSON log lines from stdin or files and renders 
 - Create: `src/level.rs`
 - Modify: `src/main.rs`
 
-- [ ] Add all dependencies and dev-dependencies to `Cargo.toml`
-- [ ] Create `src/error.rs` with `JlError` enum: `Io(std::io::Error)`, `Json(serde_json::Error)`, `Parse(String)`, `Tz(String)`. Implement `Display`, `std::error::Error`, and `From` impls for `io::Error` and `serde_json::Error`
-- [ ] Create `src/level.rs` with `Level` enum: `Trace, Debug, Info, Warn, Error, Fatal`. Implement `Ord`, `Display`, `FromStr` (case-insensitive), and a `from_bunyan_int(i64) -> Option<Level>` for Bunyan numeric levels (10=Trace, 20=Debug, 30=Info, 40=Warn, 50=Error, 60=Fatal)
-- [ ] Update `src/main.rs` to declare modules (`mod error; mod level;`)
-- [ ] Write unit tests for `Level` parsing (string variants, case insensitivity, Bunyan ints, ordering)
-- [ ] Write unit tests for `JlError` Display and From conversions
-- [ ] `cargo test` - must pass
+- [x] Add all dependencies and dev-dependencies to `Cargo.toml`
+- [x] Create `src/error.rs` with `JlError` enum: `Io(std::io::Error)`, `Json(serde_json::Error)`, `Parse(String)`, `Tz(String)`. Implement `Display`, `std::error::Error`, and `From` impls for `io::Error` and `serde_json::Error`
+- [x] Create `src/level.rs` with `Level` enum: `Trace, Debug, Info, Warn, Error, Fatal`. Implement `Ord`, `Display`, `FromStr` (case-insensitive), and a `from_bunyan_int(i64) -> Option<Level>` for Bunyan numeric levels (10=Trace, 20=Debug, 30=Info, 40=Warn, 50=Error, 60=Fatal)
+- [x] Update `src/main.rs` to declare modules (`mod error; mod level;`)
+- [x] Write unit tests for `Level` parsing (string variants, case insensitivity, Bunyan ints, ordering)
+- [x] Write unit tests for `JlError` Display and From conversions
+- [x] `cargo test` - must pass
 
 ### Task 2: CLI argument parsing
 
