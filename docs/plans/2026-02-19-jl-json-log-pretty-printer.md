@@ -163,11 +163,11 @@ Build a Rust CLI tool that reads JSON log lines from stdin or files and renders 
 
 ### Task 11: Verify acceptance criteria
 
-- [ ] Manual test: `echo '{"@timestamp":"2024-01-15T10:30:00Z","level":"INFO","logger_name":"com.example","message":"hello"}' | cargo run`
-- [ ] Manual test: `echo '{"level":30,"time":"2024-01-15T10:30:00Z","name":"myapp","msg":"started","v":0}' | cargo run` (Bunyan)
-- [ ] Run full test suite: `cargo test`
-- [ ] Run linter: `cargo clippy -- -D warnings`
-- [ ] Run formatter check: `cargo fmt -- --check`
+- [x] Manual test: `echo '{"@timestamp":"2024-01-15T10:30:00Z","level":"INFO","logger_name":"com.example","message":"hello"}' | cargo run`
+- [x] Manual test: `echo '{"level":30,"time":"2024-01-15T10:30:00Z","name":"myapp","msg":"started","v":0}' | cargo run` (Bunyan)
+- [x] Run full test suite: `cargo test`
+- [x] Run linter: `cargo clippy -- -D warnings`
+- [x] Run formatter check: `cargo fmt -- --check`
 
 ### Task 12: Update documentation
 
