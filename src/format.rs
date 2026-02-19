@@ -343,13 +343,13 @@ pub fn shorten_logger_dots(name: &str) -> String {
 /// - `truncate_logger_left("c.e.s.MyHandler", 13)` → `"e.s.MyHandler"` (stripped "c.")
 /// - `truncate_logger_left("VeryLongName", 4)` → `"Name"` (hard-truncated)
 pub fn truncate_logger_left(name: &str, max_len: usize) -> String {
-    if max_len == 0 || name.len() <= max_len {
+    if max_len == 0 || name.chars().count() <= max_len {
         return name.to_string();
     }
 
     // Try stripping leftmost dot-segments one at a time
     let mut remaining = name;
-    while remaining.len() > max_len {
+    while remaining.chars().count() > max_len {
         if let Some(dot_pos) = remaining.find('.') {
             let after_dot = &remaining[dot_pos + 1..];
             if after_dot.is_empty() {
@@ -362,8 +362,9 @@ pub fn truncate_logger_left(name: &str, max_len: usize) -> String {
     }
 
     // If still too long, hard-truncate from the left
-    if remaining.len() > max_len {
-        remaining[remaining.len() - max_len..].to_string()
+    let char_count = remaining.chars().count();
+    if char_count > max_len {
+        remaining.chars().skip(char_count - max_len).collect()
     } else {
         remaining.to_string()
     }

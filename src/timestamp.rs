@@ -87,25 +87,25 @@ pub fn format_timestamp(
     tz: &str,
     ts_format: TsFormat,
 ) -> Result<String, JlError> {
-    let (full_fmt, full_fmt_utc) = match ts_format {
-        TsFormat::Time => ("%H:%M:%S%.3f", "%H:%M:%S%.3f"),
-        TsFormat::Full => ("%Y-%m-%dT%H:%M:%S%.3f", "%Y-%m-%dT%H:%M:%S%.3f"),
+    let fmt = match ts_format {
+        TsFormat::Time => "%H:%M:%S%.3f",
+        TsFormat::Full => "%Y-%m-%dT%H:%M:%S%.3f",
     };
     let formatted = match tz.to_ascii_lowercase().as_str() {
         "local" => {
             let local_dt = ts.with_timezone(&Local);
-            local_dt.format(full_fmt).to_string()
+            local_dt.format(fmt).to_string()
         }
         "utc" => {
             let utc_dt = ts.with_timezone(&Utc);
-            utc_dt.format(full_fmt_utc).to_string()
+            utc_dt.format(fmt).to_string()
         }
         _ => {
             let named_tz: Tz = tz
                 .parse()
                 .map_err(|_| JlError::Tz(format!("unknown timezone: {tz}")))?;
             let converted = ts.with_timezone(&named_tz);
-            converted.format(full_fmt).to_string()
+            converted.format(fmt).to_string()
         }
     };
     Ok(formatted)

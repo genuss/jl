@@ -237,6 +237,119 @@ fn multiple_file_inputs() {
     assert!(pos1 < pos2);
 }
 
+// --- --logger-format short-dots: verify abbreviated logger name ---
+
+#[test]
+fn logger_format_short_dots_via_cli() {
+    let input = r#"{"@timestamp":"2024-01-15T10:30:00Z","level":"INFO","logger_name":"com.example.service.MyHandler","message":"hello"}"#;
+    jl().arg("--color")
+        .arg("never")
+        .write_stdin(input)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("c.e.s.MyHandler"));
+}
+
+// --- --logger-length: verify left-crop truncation ---
+
+#[test]
+fn logger_length_truncation_via_cli() {
+    let input = r#"{"@timestamp":"2024-01-15T10:30:00Z","level":"INFO","logger_name":"com.example.service.MyHandler","message":"hello"}"#;
+    jl().arg("--color")
+        .arg("never")
+        .arg("--logger-length")
+        .arg("10")
+        .write_stdin(input)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("MyHandler"))
+        .stdout(predicate::str::contains("com.example").not());
+}
+
+// --- --ts-format time: verify time-only output ---
+
+#[test]
+fn ts_format_time_via_cli() {
+    let input = r#"{"@timestamp":"2024-01-15T10:30:00Z","level":"INFO","logger_name":"app","message":"hello"}"#;
+    let output = jl()
+        .arg("--color")
+        .arg("never")
+        .arg("--tz")
+        .arg("utc")
+        .write_stdin(input)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8(output).unwrap();
+    assert!(stdout.contains("10:30:00.000"), "should contain time-only format");
+    assert!(!stdout.contains("2024-01-15"), "should not contain date in time-only mode");
+}
+
+// --- --ts-format full: verify full datetime output ---
+
+#[test]
+fn ts_format_full_via_cli() {
+    let input = r#"{"@timestamp":"2024-01-15T10:30:00Z","level":"INFO","logger_name":"app","message":"hello"}"#;
+    jl().arg("--color")
+        .arg("never")
+        .arg("--ts-format")
+        .arg("full")
+        .arg("--tz")
+        .arg("utc")
+        .write_stdin(input)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("2024-01-15T10:30:00.000"));
+}
+
+// --- --expanded: verify extras on separate lines ---
+
+#[test]
+fn expanded_mode_via_cli() {
+    let input = r#"{"@timestamp":"2024-01-15T10:30:00Z","level":"INFO","logger_name":"app","message":"hello","host":"server1"}"#;
+    let output = jl()
+        .arg("--color")
+        .arg("never")
+        .arg("--expanded")
+        .arg("--add-fields")
+        .arg("host")
+        .write_stdin(input)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8(output).unwrap();
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert!(lines.len() > 1, "expanded mode should produce multiple lines");
+    assert!(stdout.contains("host"), "should contain extra field");
+    assert!(stdout.contains("server1"), "should contain extra field value");
+}
+
+// --- compact mode is default: verify extras on same line ---
+
+#[test]
+fn compact_mode_default_via_cli() {
+    let input = r#"{"@timestamp":"2024-01-15T10:30:00Z","level":"INFO","logger_name":"app","message":"hello","host":"server1"}"#;
+    let output = jl()
+        .arg("--color")
+        .arg("never")
+        .arg("--add-fields")
+        .arg("host")
+        .write_stdin(input)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8(output).unwrap();
+    let lines: Vec<&str> = stdout.trim().lines().collect();
+    assert_eq!(lines.len(), 1, "compact mode (default) should produce a single line");
+    assert!(stdout.contains("host=server1"), "should contain compact k=v format");
+}
+
 // --- -o output file option ---
 
 #[test]

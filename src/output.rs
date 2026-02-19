@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{self, BufWriter, Stdout, Write};
+use std::io::{self, BufWriter, Write};
 use std::path::Path;
 
 use crate::error::JlError;
@@ -16,8 +16,13 @@ pub trait OutputSink {
     }
 }
 
+/// Writes lines to stdout, flushing after each line for immediate display.
+///
+/// Uses a raw stdout handle (no `BufWriter`) because every line is flushed
+/// immediately. This ensures output appears without delay when piped from
+/// commands like `kubectl logs ... | jl`.
 pub struct StdoutSink {
-    writer: BufWriter<Stdout>,
+    writer: io::Stdout,
 }
 
 impl Default for StdoutSink {
@@ -29,20 +34,21 @@ impl Default for StdoutSink {
 impl StdoutSink {
     pub fn new() -> Self {
         Self {
-            writer: BufWriter::new(io::stdout()),
+            writer: io::stdout(),
         }
     }
 }
 
 impl OutputSink for StdoutSink {
     fn write_line(&mut self, line: &str) -> Result<(), JlError> {
-        writeln!(self.writer, "{line}")?;
-        self.writer.flush()?;
+        let mut lock = self.writer.lock();
+        writeln!(lock, "{line}")?;
+        lock.flush()?;
         Ok(())
     }
 
     fn flush(&mut self) -> Result<(), JlError> {
-        self.writer.flush()?;
+        self.writer.lock().flush()?;
         Ok(())
     }
 }
