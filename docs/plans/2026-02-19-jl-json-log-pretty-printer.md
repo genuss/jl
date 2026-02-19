@@ -57,12 +57,12 @@ Build a Rust CLI tool that reads JSON log lines from stdin or files and renders 
 - Create: `src/output.rs`
 - Modify: `src/main.rs`
 
-- [ ] Create `src/input.rs` with `LineSource` trait (`fn next_line(&mut self) -> Result<Option<String>, JlError>`), `StdinSource` (wraps `BufReader<Stdin>`), `FileSource` (wraps `BufReader<File>`)
-- [ ] Create `src/output.rs` with `OutputSink` trait (`fn write_line(&mut self, line: &str) -> Result<(), JlError>`), `StdoutSink` (wraps `BufWriter<Stdout>`), `FileSink` (wraps `BufWriter<File>`)
-- [ ] Update `src/main.rs` to declare both modules
-- [ ] Write tests for `FileSource` reading lines from a temp file (using `tempfile`)
-- [ ] Write tests for `FileSink` writing lines to a temp file
-- [ ] `cargo test` - must pass
+- [x] Create `src/input.rs` with `LineSource` trait (`fn next_line(&mut self) -> Result<Option<String>, JlError>`), `StdinSource` (wraps `BufReader<Stdin>`), `FileSource` (wraps `BufReader<File>`)
+- [x] Create `src/output.rs` with `OutputSink` trait (`fn write_line(&mut self, line: &str) -> Result<(), JlError>`), `StdoutSink` (wraps `BufWriter<Stdout>`), `FileSink` (wraps `BufWriter<File>`)
+- [x] Update `src/main.rs` to declare both modules
+- [x] Write tests for `FileSource` reading lines from a temp file (using `tempfile`)
+- [x] Write tests for `FileSink` writing lines to a temp file
+- [x] `cargo test` - must pass
 
 ### Task 4: JSON parsing and non-JSON handling
 
