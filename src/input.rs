@@ -176,6 +176,8 @@ impl LineSource for FollowSource {
                                 use std::os::unix::fs::MetadataExt;
                                 self.inode = new_meta.ino();
                             }
+                            // Discard any partial line buffered from the old file
+                            partial.clear();
                         } else {
                             new_reader.seek(SeekFrom::Start(current_pos))?;
                         }
@@ -196,6 +198,8 @@ impl LineSource for FollowSource {
                                 // File is shorter than our position – likely
                                 // truncated or replaced; start from the beginning.
                                 new_reader.seek(SeekFrom::Start(0))?;
+                                // Discard any partial line buffered from the old file
+                                partial.clear();
                             } else {
                                 new_reader.seek(SeekFrom::Start(current_pos))?;
                             }

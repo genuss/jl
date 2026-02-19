@@ -56,7 +56,8 @@ pub struct Args {
     #[arg(long, default_value = "local")]
     pub tz: String,
 
-    /// Follow input file(s), waiting for new data (like tail -f).
+    /// Follow the last input file, waiting for new data (like tail -f).
+    /// When multiple files are given, preceding files are read to completion first.
     #[arg(long)]
     pub follow: bool,
 
