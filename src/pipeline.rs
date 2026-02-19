@@ -10,7 +10,11 @@ use crate::schema::Schema;
 
 /// Run the full pipeline: read lines, parse, extract, filter, render, write.
 pub fn run(args: Args) -> Result<(), JlError> {
-    let color = ColorConfig::new(args.color);
+    // When writing to a file, disable auto-color since the output is not a terminal
+    let color = match (&args.output, args.color) {
+        (Some(_), crate::cli::ColorMode::Auto) => ColorConfig { enabled: false },
+        _ => ColorConfig::new(args.color),
+    };
     let tokens = format::parse_template(&args.format);
 
     let mut output: Box<dyn OutputSink> = match &args.output {
@@ -19,6 +23,11 @@ pub fn run(args: Args) -> Result<(), JlError> {
     };
 
     if args.files.is_empty() {
+        if args.follow {
+            return Err(JlError::Parse(
+                "--follow requires at least one input file".to_string(),
+            ));
+        }
         let mut source = StdinSource::new();
         process_source(&mut source, &mut *output, &tokens, &color, &args)?;
     } else if args.follow {

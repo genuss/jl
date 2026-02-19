@@ -18,6 +18,11 @@ use cli::Args;
 fn main() {
     let args = Args::parse();
     if let Err(e) = pipeline::run(args) {
+        if let error::JlError::Io(ref io_err) = e
+            && io_err.kind() == std::io::ErrorKind::BrokenPipe
+        {
+            std::process::exit(0);
+        }
         eprintln!("jl: {e}");
         std::process::exit(1);
     }

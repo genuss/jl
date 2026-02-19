@@ -235,7 +235,11 @@ fn collect_extras<'a>(
 /// Parse a comma-separated field list into a set of field names.
 fn parse_field_list(list: Option<&str>) -> HashSet<String> {
     match list {
-        Some(s) => s.split(',').map(|f| f.trim().to_string()).collect(),
+        Some(s) => s
+            .split(',')
+            .map(|f| f.trim().to_string())
+            .filter(|f| !f.is_empty())
+            .collect(),
         None => HashSet::new(),
     }
 }
