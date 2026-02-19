@@ -55,14 +55,14 @@ impl Schema {
                 timestamp: vec!["time"],
                 logger: vec!["component"],
                 message: vec!["msg"],
-                stack_trace: vec!["stack_trace", "stacktrace", "error.stack_trace"],
+                stack_trace: vec!["stack_trace", "stacktrace"],
             },
             Schema::Bunyan => FieldMapping {
                 level: vec!["level"],
                 timestamp: vec!["time"],
                 logger: vec!["name"],
                 message: vec!["msg"],
-                stack_trace: vec!["err.stack", "stack"],
+                stack_trace: vec!["stack"],
             },
             Schema::Generic => FieldMapping {
                 level: vec!["level", "severity", "loglevel", "log_level", "lvl"],
@@ -80,8 +80,6 @@ impl Schema {
                     "stack_trace",
                     "stacktrace",
                     "stack",
-                    "error.stack_trace",
-                    "err.stack",
                     "exception",
                     "traceback",
                 ],
@@ -280,11 +278,9 @@ mod tests {
             "level": "info",
             "msg": "test"
         });
-        // Both Logrus and Bunyan share these fields; without v/numeric level, Bunyan doesn't get bonus
+        // Both Logrus (2) and Bunyan (2) tie on score; tie-breaking favors Bunyan over Logrus
         let schema = detect_schema(&value);
-        // Should not be Logstash (no @timestamp), and should be a valid schema
-        assert_ne!(schema, Schema::Logstash);
-        assert!(schema == Schema::Logrus || schema == Schema::Bunyan || schema == Schema::Generic);
+        assert_eq!(schema, Schema::Bunyan);
     }
 
     // --- Forced schema selection tests ---
@@ -447,9 +443,9 @@ mod tests {
             "time": "2024-01-15T10:30:00Z"
         });
         let schema = detect_schema(&value);
-        // Without v, Bunyan doesn't get the +3 bonus, so it may not win
-        // But it should still be detected as something reasonable
-        assert!(schema == Schema::Bunyan || schema == Schema::Logrus || schema == Schema::Generic);
+        // Without v, Bunyan doesn't get the +3 bonus, but still scores 4
+        // (level, name, time, msg) vs Logrus 3 (level, msg, time). Bunyan wins.
+        assert_eq!(schema, Schema::Bunyan);
     }
 
     #[test]

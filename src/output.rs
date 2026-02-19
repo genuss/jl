@@ -50,8 +50,13 @@ impl FileSink {
 impl OutputSink for FileSink {
     fn write_line(&mut self, line: &str) -> Result<(), JlError> {
         writeln!(self.writer, "{line}")?;
-        self.writer.flush()?;
         Ok(())
+    }
+}
+
+impl Drop for FileSink {
+    fn drop(&mut self) {
+        let _ = self.writer.flush();
     }
 }
 

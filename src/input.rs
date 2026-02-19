@@ -124,8 +124,14 @@ impl LineSource for FollowSource {
                 // or just continue reading from the current position
                 if let Ok(file) = File::open(&self.path) {
                     let current_pos = self.reader.stream_position()?;
+                    let new_len = file.metadata().map(|m| m.len()).unwrap_or(0);
                     let mut new_reader = BufReader::new(file);
-                    new_reader.seek(SeekFrom::Start(current_pos))?;
+                    if new_len < current_pos {
+                        // File was truncated or rotated; start from beginning
+                        new_reader.seek(SeekFrom::Start(0))?;
+                    } else {
+                        new_reader.seek(SeekFrom::Start(current_pos))?;
+                    }
                     self.reader = new_reader;
                 }
                 continue;

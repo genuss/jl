@@ -51,22 +51,24 @@ fn process_source(
     args: &Args,
 ) -> Result<(), JlError> {
     let mut cached_schema: Option<Schema> = None;
+    let mut cached_mapping: Option<crate::schema::FieldMapping> = None;
 
     while let Some(line) = source.next_line()? {
         match parse::parse_line(&line, args.non_json)? {
             ParseResult::Json(value) => {
-                // Detect or use cached schema
-                let schema = match cached_schema {
-                    Some(s) => s,
-                    None => {
+                // Detect or use cached schema and mapping
+                let mapping = match (&cached_schema, &cached_mapping) {
+                    (Some(_), Some(m)) => m,
+                    _ => {
                         let s = Schema::from_choice(args.schema, &value);
+                        let m = s.field_mapping();
                         cached_schema = Some(s);
-                        s
+                        cached_mapping = Some(m);
+                        cached_mapping.as_ref().unwrap()
                     }
                 };
 
-                let mapping = schema.field_mapping();
-                let record = LogRecord::extract(value, &mapping, &args.tz)?;
+                let record = LogRecord::extract(value, mapping, &args.tz)?;
 
                 // Apply --min-level filter
                 if let Some(ref min_level) = args.min_level {

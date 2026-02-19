@@ -53,10 +53,10 @@ fn parse_epoch(value: f64) -> Option<DateTime<FixedOffset>> {
         return None;
     }
     let (secs, nanos) = if value.abs() >= 1e12 {
-        // Epoch milliseconds
+        // Epoch milliseconds - use Euclidean division for correct negative handling
         let millis = value as i64;
-        let secs = millis / 1000;
-        let remaining_millis = (millis % 1000).unsigned_abs() as u32;
+        let secs = millis.div_euclid(1000);
+        let remaining_millis = millis.rem_euclid(1000) as u32;
         (secs, remaining_millis * 1_000_000)
     } else {
         // Epoch seconds

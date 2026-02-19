@@ -101,8 +101,8 @@ Falls back to trying common field name variants for each role:
 
 - Message: `message`, `msg`, `text`, `body`, `log`
 - Level: `level`, `severity`, `loglevel`, `log_level`, `lvl`
-- Timestamp: `timestamp`, `time`, `ts`, `datetime`, `date`, `@timestamp`
-- Logger: `logger`, `logger_name`, `source`, `name`, `component`, `module`
+- Timestamp: `timestamp`, `@timestamp`, `time`, `ts`, `datetime`, `date`
+- Logger: `logger`, `logger_name`, `name`, `component`, `source`, `caller`
 
 ## Examples
 
