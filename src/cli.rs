@@ -40,6 +40,10 @@ pub struct Args {
     #[arg(long, value_enum, default_value_t = SchemaChoice::Auto)]
     pub schema: SchemaChoice,
 
+    /// How to format logger names in output.
+    #[arg(long, value_enum, default_value_t = LoggerFormat::ShortDots)]
+    pub logger_format: LoggerFormat,
+
     /// Minimum log level to display. Lines below this level are filtered out.
     #[arg(long)]
     pub min_level: Option<Level>,
@@ -92,6 +96,15 @@ pub enum NonJsonMode {
     Fail,
 }
 
+/// How to format logger names in output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum LoggerFormat {
+    /// Abbreviate dot-separated segments: `com.example.service.Handler` → `c.e.s.Handler`.
+    ShortDots,
+    /// Display the logger name exactly as it appears in the log record.
+    AsIs,
+}
+
 /// Which log schema to use for field mapping.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum SchemaChoice {
@@ -124,6 +137,7 @@ mod tests {
         assert_eq!(args.color, ColorMode::Auto);
         assert_eq!(args.non_json, NonJsonMode::PrintAsIs);
         assert_eq!(args.schema, SchemaChoice::Auto);
+        assert_eq!(args.logger_format, LoggerFormat::ShortDots);
         assert!(args.min_level.is_none());
         assert!(!args.raw_json);
         assert!(!args.compact);

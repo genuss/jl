@@ -14,6 +14,8 @@ fn logstash_json_via_stdin() {
     let input = r#"{"@timestamp":"2024-01-15T10:30:00Z","level":"INFO","logger_name":"com.example","message":"hello world"}"#;
     jl().arg("--color")
         .arg("never")
+        .arg("--logger-format")
+        .arg("as-is")
         .write_stdin(input)
         .assert()
         .success()

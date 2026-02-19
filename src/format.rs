@@ -149,7 +149,12 @@ pub fn render(
                         sanitize_control_chars(&record.timestamp.clone().unwrap_or_default())
                     }
                     CanonicalField::Logger => {
-                        sanitize_control_chars(&record.logger.clone().unwrap_or_default())
+                        let raw = record.logger.clone().unwrap_or_default();
+                        let formatted = match args.logger_format {
+                            crate::cli::LoggerFormat::ShortDots => shorten_logger_dots(&raw),
+                            crate::cli::LoggerFormat::AsIs => raw,
+                        };
+                        sanitize_control_chars(&formatted)
                     }
                     CanonicalField::Message => {
                         sanitize_control_chars(&record.message.clone().unwrap_or_default())
@@ -292,6 +297,33 @@ fn format_extra_value(val: &Value) -> String {
     }
 }
 
+/// Abbreviate dot-separated logger name segments, keeping only the first character
+/// of each segment except the last.
+///
+/// For example: `com.example.service.MyHandler` → `c.e.s.MyHandler`
+///
+/// Single-segment names and empty strings are returned unchanged.
+pub fn shorten_logger_dots(name: &str) -> String {
+    if name.is_empty() {
+        return String::new();
+    }
+    let segments: Vec<&str> = name.split('.').collect();
+    if segments.len() <= 1 {
+        return name.to_string();
+    }
+    let mut parts: Vec<String> = segments[..segments.len() - 1]
+        .iter()
+        .map(|s| {
+            s.chars()
+                .next()
+                .map(|c| c.to_string())
+                .unwrap_or_default()
+        })
+        .collect();
+    parts.push(segments[segments.len() - 1].to_string());
+    parts.join(".")
+}
+
 /// Strip terminal control characters from a string to prevent escape sequence injection.
 ///
 /// Removes C0 control characters (0x00-0x1F) except TAB (0x09) and newline (0x0A),
@@ -313,7 +345,7 @@ pub fn sanitize_control_chars(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::{ColorMode, NonJsonMode, SchemaChoice};
+    use crate::cli::{ColorMode, LoggerFormat, NonJsonMode, SchemaChoice};
     use crate::level::Level;
     use crate::record::LogRecord;
     use serde_json::json;
@@ -337,6 +369,7 @@ mod tests {
             color: ColorMode::Never,
             non_json: NonJsonMode::PrintAsIs,
             schema: SchemaChoice::Auto,
+            logger_format: LoggerFormat::AsIs,
             min_level: None,
             raw_json: false,
             compact: false,
@@ -929,5 +962,96 @@ mod tests {
         let output = test_render(&record, &tokens, &color, &args);
         assert!(!output.contains('\x1b'));
         assert!(output.contains("Error[31m at line 1[0m"));
+    }
+
+    // --- shorten_logger_dots tests ---
+
+    #[test]
+    fn shorten_logger_dots_empty() {
+        assert_eq!(shorten_logger_dots(""), "");
+    }
+
+    #[test]
+    fn shorten_logger_dots_single_segment() {
+        assert_eq!(shorten_logger_dots("MyHandler"), "MyHandler");
+    }
+
+    #[test]
+    fn shorten_logger_dots_two_segments() {
+        assert_eq!(shorten_logger_dots("example.MyHandler"), "e.MyHandler");
+    }
+
+    #[test]
+    fn shorten_logger_dots_many_segments() {
+        assert_eq!(
+            shorten_logger_dots("com.example.service.MyHandler"),
+            "c.e.s.MyHandler"
+        );
+    }
+
+    #[test]
+    fn shorten_logger_dots_already_short() {
+        assert_eq!(shorten_logger_dots("c.e.s.MyHandler"), "c.e.s.MyHandler");
+    }
+
+    #[test]
+    fn shorten_logger_dots_three_segments() {
+        assert_eq!(shorten_logger_dots("org.apache.Logger"), "o.a.Logger");
+    }
+
+    // --- Render with LoggerFormat tests ---
+
+    #[test]
+    fn render_logger_format_as_is() {
+        let record = make_record(
+            Some(Level::Info),
+            None,
+            Some("com.example.service.MyHandler"),
+            Some("hello"),
+        );
+        let tokens = parse_template("[{logger}] {message}");
+        let color = ColorConfig::with_enabled(false);
+        let mut args = default_args();
+        args.logger_format = LoggerFormat::AsIs;
+        let output = test_render(&record, &tokens, &color, &args);
+        assert_eq!(output, "[com.example.service.MyHandler] hello");
+    }
+
+    #[test]
+    fn render_logger_format_short_dots() {
+        let record = make_record(
+            Some(Level::Info),
+            None,
+            Some("com.example.service.MyHandler"),
+            Some("hello"),
+        );
+        let tokens = parse_template("[{logger}] {message}");
+        let color = ColorConfig::with_enabled(false);
+        let mut args = default_args();
+        args.logger_format = LoggerFormat::ShortDots;
+        let output = test_render(&record, &tokens, &color, &args);
+        assert_eq!(output, "[c.e.s.MyHandler] hello");
+    }
+
+    #[test]
+    fn render_logger_format_short_dots_single_segment() {
+        let record = make_record(Some(Level::Info), None, Some("SimpleLogger"), Some("msg"));
+        let tokens = parse_template("[{logger}] {message}");
+        let color = ColorConfig::with_enabled(false);
+        let mut args = default_args();
+        args.logger_format = LoggerFormat::ShortDots;
+        let output = test_render(&record, &tokens, &color, &args);
+        assert_eq!(output, "[SimpleLogger] msg");
+    }
+
+    #[test]
+    fn render_logger_format_short_dots_missing_logger() {
+        let record = make_record(Some(Level::Info), None, None, Some("msg"));
+        let tokens = parse_template("[{logger}] {message}");
+        let color = ColorConfig::with_enabled(false);
+        let mut args = default_args();
+        args.logger_format = LoggerFormat::ShortDots;
+        let output = test_render(&record, &tokens, &color, &args);
+        assert_eq!(output, "[] msg");
     }
 }

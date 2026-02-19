@@ -140,7 +140,7 @@ fn process_source(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::{ColorMode, NonJsonMode, SchemaChoice};
+    use crate::cli::{ColorMode, LoggerFormat, NonJsonMode, SchemaChoice};
     use crate::level::Level;
     use std::io::Write;
     use std::path::PathBuf;
@@ -154,6 +154,7 @@ mod tests {
             color: ColorMode::Never,
             non_json: NonJsonMode::PrintAsIs,
             schema: SchemaChoice::Auto,
+            logger_format: LoggerFormat::AsIs,
             min_level: None,
             raw_json: false,
             compact: false,
