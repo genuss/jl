@@ -10,7 +10,11 @@ mod output;
 #[allow(dead_code)]
 mod parse;
 #[allow(dead_code)]
+mod record;
+#[allow(dead_code)]
 mod schema;
+#[allow(dead_code)]
+mod timestamp;
 
 use clap::Parser;
 

@@ -95,13 +95,13 @@ Build a Rust CLI tool that reads JSON log lines from stdin or files and renders 
 - Create: `src/timestamp.rs`
 - Modify: `src/main.rs`
 
-- [ ] Create `src/timestamp.rs` with `parse_timestamp(value: &serde_json::Value) -> Option<chrono::DateTime<chrono::FixedOffset>>` supporting ISO 8601 strings, epoch seconds (f64/i64), and epoch millis. Add `format_timestamp(ts: &DateTime<FixedOffset>, tz: &str) -> Result<String, JlError>` converting to local/utc/IANA timezone
-- [ ] Create `src/record.rs` with `LogRecord` struct: `level: Option<Level>`, `timestamp: Option<String>` (formatted), `logger: Option<String>`, `message: Option<String>`, `stack_trace: Option<String>`, `extras: BTreeMap<String, serde_json::Value>`, `raw: serde_json::Value`
-- [ ] Implement `LogRecord::extract(value: serde_json::Value, mapping: &FieldMapping, tz: &str) -> Result<LogRecord, JlError>`: pull canonical fields using mapping, parse level (string or Bunyan int), format timestamp, collect remaining fields as extras
-- [ ] Write tests for timestamp parsing (ISO 8601, epoch seconds, epoch millis, invalid)
-- [ ] Write tests for timezone conversion (UTC, local, named timezone)
-- [ ] Write tests for LogRecord extraction with each schema's field mapping
-- [ ] `cargo test` - must pass
+- [x] Create `src/timestamp.rs` with `parse_timestamp(value: &serde_json::Value) -> Option<chrono::DateTime<chrono::FixedOffset>>` supporting ISO 8601 strings, epoch seconds (f64/i64), and epoch millis. Add `format_timestamp(ts: &DateTime<FixedOffset>, tz: &str) -> Result<String, JlError>` converting to local/utc/IANA timezone
+- [x] Create `src/record.rs` with `LogRecord` struct: `level: Option<Level>`, `timestamp: Option<String>` (formatted), `logger: Option<String>`, `message: Option<String>`, `stack_trace: Option<String>`, `extras: BTreeMap<String, serde_json::Value>`, `raw: serde_json::Value`
+- [x] Implement `LogRecord::extract(value: serde_json::Value, mapping: &FieldMapping, tz: &str) -> Result<LogRecord, JlError>`: pull canonical fields using mapping, parse level (string or Bunyan int), format timestamp, collect remaining fields as extras
+- [x] Write tests for timestamp parsing (ISO 8601, epoch seconds, epoch millis, invalid)
+- [x] Write tests for timezone conversion (UTC, local, named timezone)
+- [x] Write tests for LogRecord extraction with each schema's field mapping
+- [x] `cargo test` - must pass
 
 ### Task 7: Color support and output formatting
 
