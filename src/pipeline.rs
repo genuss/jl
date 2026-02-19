@@ -16,6 +16,7 @@ pub fn run(args: Args) -> Result<(), JlError> {
         _ => ColorConfig::new(args.color),
     };
     let tokens = format::parse_template(&args.format);
+    let render_ctx = format::RenderContext::new(&args, &tokens);
 
     let mut output: Box<dyn OutputSink> = match &args.output {
         Some(path) => Box::new(FileSink::new(path)?),
@@ -29,22 +30,50 @@ pub fn run(args: Args) -> Result<(), JlError> {
             ));
         }
         let mut source = StdinSource::new();
-        process_source(&mut source, &mut *output, &tokens, &color, &args)?;
+        process_source(
+            &mut source,
+            &mut *output,
+            &tokens,
+            &color,
+            &args,
+            &render_ctx,
+        )?;
     } else if args.follow {
         // Follow mode: tail the last file, reading existing content then waiting for new lines
         // Process any preceding files normally first
         for path in &args.files[..args.files.len().saturating_sub(1)] {
             let mut source = FileSource::new(path)?;
-            process_source(&mut source, &mut *output, &tokens, &color, &args)?;
+            process_source(
+                &mut source,
+                &mut *output,
+                &tokens,
+                &color,
+                &args,
+                &render_ctx,
+            )?;
         }
         if let Some(path) = args.files.last() {
             let mut source = FollowSource::new(path)?;
-            process_source(&mut source, &mut *output, &tokens, &color, &args)?;
+            process_source(
+                &mut source,
+                &mut *output,
+                &tokens,
+                &color,
+                &args,
+                &render_ctx,
+            )?;
         }
     } else {
         for path in &args.files {
             let mut source = FileSource::new(path)?;
-            process_source(&mut source, &mut *output, &tokens, &color, &args)?;
+            process_source(
+                &mut source,
+                &mut *output,
+                &tokens,
+                &color,
+                &args,
+                &render_ctx,
+            )?;
         }
     }
 
@@ -59,6 +88,7 @@ fn process_source(
     tokens: &[format::FormatToken],
     color: &ColorConfig,
     args: &Args,
+    render_ctx: &format::RenderContext,
 ) -> Result<(), JlError> {
     let mut cached_schema: Option<Schema> = None;
     let mut cached_mapping: Option<crate::schema::FieldMapping> = None;
@@ -88,7 +118,7 @@ fn process_source(
                     }
                 }
 
-                let rendered = format::render(&record, tokens, color, args);
+                let rendered = format::render(&record, tokens, color, args, render_ctx);
                 output.write_line(&rendered)?;
             }
             ParseResult::NonJson(text) => {

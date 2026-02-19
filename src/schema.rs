@@ -28,14 +28,14 @@ pub struct FieldMapping {
 
 impl FieldMapping {
     /// Find the first matching key from the candidates in the given JSON object.
-    pub fn find_key<'a>(
+    pub fn find_key(
         candidates: &[&'static str],
-        obj: &'a serde_json::Map<String, Value>,
-    ) -> Option<&'a str> {
+        obj: &serde_json::Map<String, Value>,
+    ) -> Option<&'static str> {
         candidates
             .iter()
             .find(|&&key| obj.contains_key(key))
-            .map(|&key| key as &str)
+            .copied()
     }
 }
 

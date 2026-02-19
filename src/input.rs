@@ -154,6 +154,7 @@ impl FollowSource {
 
 impl LineSource for FollowSource {
     fn next_line(&mut self) -> Result<Option<String>, JlError> {
+        let mut partial = String::new();
         loop {
             let mut line = String::new();
             let bytes_read = self.reader.read_line(&mut line)?;
@@ -205,14 +206,23 @@ impl LineSource for FollowSource {
                 }
                 continue;
             }
-            // Remove trailing newline
+            // Check if we got a complete line (ends with newline)
             if line.ends_with('\n') {
                 line.pop();
                 if line.ends_with('\r') {
                     line.pop();
                 }
+                if partial.is_empty() {
+                    return Ok(Some(line));
+                } else {
+                    partial.push_str(&line);
+                    return Ok(Some(std::mem::take(&mut partial)));
+                }
+            } else {
+                // Partial line (no trailing newline) - buffer and continue
+                // reading to get the rest before returning
+                partial.push_str(&line);
             }
-            return Ok(Some(line));
         }
     }
 }

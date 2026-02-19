@@ -84,6 +84,35 @@ pub fn parse_template(template: &str) -> Vec<FormatToken> {
     tokens
 }
 
+/// Pre-computed rendering context to avoid redundant work per line.
+///
+/// Created once before the processing loop and reused across all records.
+pub struct RenderContext {
+    pub omit_fields: HashSet<String>,
+    pub add_fields: HashSet<String>,
+    pub template_custom_fields: HashSet<String>,
+}
+
+impl RenderContext {
+    /// Build a render context from CLI args and parsed format tokens.
+    pub fn new(args: &Args, tokens: &[FormatToken]) -> Self {
+        let omit_fields = parse_field_list(args.omit_fields.as_deref());
+        let add_fields = parse_field_list(args.add_fields.as_deref());
+        let template_custom_fields = tokens
+            .iter()
+            .filter_map(|t| match t {
+                FormatToken::CustomField(name) => Some(name.clone()),
+                _ => None,
+            })
+            .collect();
+        Self {
+            omit_fields,
+            add_fields,
+            template_custom_fields,
+        }
+    }
+}
+
 /// Render a log record using the given format tokens, color config, and CLI args.
 ///
 /// Handles:
@@ -98,24 +127,12 @@ pub fn render(
     tokens: &[FormatToken],
     color: &ColorConfig,
     args: &Args,
+    ctx: &RenderContext,
 ) -> String {
     // --raw-json: just output the raw JSON
     if args.raw_json {
         return record.raw.to_string();
     }
-
-    let omit_fields = parse_field_list(args.omit_fields.as_deref());
-    let add_fields = parse_field_list(args.add_fields.as_deref());
-
-    // Collect custom field names referenced in the template so we can exclude
-    // them from the extras section (they're already shown inline).
-    let template_custom_fields: HashSet<String> = tokens
-        .iter()
-        .filter_map(|t| match t {
-            FormatToken::CustomField(name) => Some(name.clone()),
-            _ => None,
-        })
-        .collect();
 
     // Build the main formatted line from the template
     let mut line = String::new();
@@ -152,7 +169,12 @@ pub fn render(
     }
 
     // Determine which extras to include
-    let extras = collect_extras(record, &add_fields, &omit_fields, &template_custom_fields);
+    let extras = collect_extras(
+        record,
+        &ctx.add_fields,
+        &ctx.omit_fields,
+        &ctx.template_custom_fields,
+    );
 
     // Append extras
     if !extras.is_empty() {
@@ -185,7 +207,7 @@ pub fn render(
 
     // Append stack trace if present and not omitted
     if let Some(ref st) = record.stack_trace
-        && !omit_fields.contains("stack_trace")
+        && !ctx.omit_fields.contains("stack_trace")
     {
         append_stack_trace(&mut line, st, color);
     }
@@ -239,7 +261,7 @@ fn collect_extras<'a>(
                 return false;
             }
             if !add_fields.is_empty() {
-                add_fields.contains(k.as_str())
+                add_fields.contains(k.as_str()) && !omit_fields.contains(k.as_str())
             } else if !omit_fields.is_empty() {
                 !omit_fields.contains(k.as_str())
             } else {
@@ -295,6 +317,16 @@ mod tests {
     use crate::record::LogRecord;
     use serde_json::json;
     use std::collections::BTreeMap;
+
+    fn test_render(
+        record: &LogRecord,
+        tokens: &[FormatToken],
+        color: &ColorConfig,
+        args: &Args,
+    ) -> String {
+        let ctx = RenderContext::new(args, tokens);
+        render(record, tokens, color, args, &ctx)
+    }
 
     fn default_args() -> Args {
         Args {
@@ -427,7 +459,7 @@ mod tests {
         let tokens = parse_template("{timestamp} {level} [{logger}] {message}");
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         assert_eq!(
             output,
             "2024-01-15T10:30:00.000Z INFO [com.example] hello world"
@@ -440,7 +472,7 @@ mod tests {
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(true);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         // Should contain ANSI codes for ERROR level (red)
         assert!(output.contains("\x1b["));
         assert!(output.contains("ERROR"));
@@ -453,7 +485,7 @@ mod tests {
         let tokens = parse_template("{timestamp} {level} [{logger}] {message}");
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         assert_eq!(output, "  [] just a message");
     }
 
@@ -465,7 +497,7 @@ mod tests {
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         assert!(output.contains("INFO: test"));
         assert!(output.contains("\n  host: server1"));
         assert!(output.contains("\n  pid: 1234"));
@@ -480,7 +512,7 @@ mod tests {
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
         args.compact = true;
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         assert!(output.contains("INFO: test"));
         // Compact: extras on same line, not on separate lines
         assert!(!output.contains('\n'));
@@ -499,7 +531,7 @@ mod tests {
         let mut args = default_args();
         args.omit_fields = Some("secret,pid".to_string());
         args.compact = true;
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         assert!(output.contains("host=server1"));
         assert!(!output.contains("secret"));
         assert!(!output.contains("pid"));
@@ -516,7 +548,7 @@ mod tests {
         let mut args = default_args();
         args.add_fields = Some("host".to_string());
         args.compact = true;
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         // Only host should be included
         assert!(output.contains("host=server1"));
         assert!(!output.contains("pid"));
@@ -543,7 +575,7 @@ mod tests {
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
         args.raw_json = true;
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         // Should be the raw JSON, not the formatted template
         let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
         assert_eq!(parsed, raw);
@@ -557,7 +589,7 @@ mod tests {
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         assert!(output.contains("ERROR: crash"));
         assert!(output.contains("\n    java.lang.NullPointerException"));
         assert!(output.contains("\n    \tat Foo.bar(Foo.java:42)"));
@@ -571,7 +603,7 @@ mod tests {
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
         args.omit_fields = Some("stack_trace".to_string());
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         assert!(output.contains("ERROR: crash"));
         assert!(!output.contains("NullPointerException"));
     }
@@ -583,7 +615,7 @@ mod tests {
         let tokens = parse_template("{level} [{host}] {message}");
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         assert_eq!(output, "INFO [server1] test");
     }
 
@@ -593,7 +625,7 @@ mod tests {
         let tokens = parse_template("{level} [{host}] {message}");
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         assert_eq!(output, "INFO [] test");
     }
 
@@ -608,7 +640,7 @@ mod tests {
         let tokens = parse_template("{timestamp} {level} [{logger}] {message}");
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         assert_eq!(output, "2024-01-15T10:30:00.000Z DEBUG [app] started");
         assert!(!output.contains('\n'));
     }
@@ -692,7 +724,7 @@ mod tests {
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
 
         let lines: Vec<&str> = output.lines().collect();
         // First line is the log message
@@ -725,7 +757,7 @@ mod tests {
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
 
         let lines: Vec<&str> = output.lines().collect();
         assert_eq!(lines[0], "ERROR: oops");
@@ -740,7 +772,7 @@ mod tests {
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(true);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
 
         // With color enabled, stack trace lines should contain ANSI dimmed code (\x1b[2m)
         assert!(output.contains("\x1b[2m"));
@@ -755,7 +787,7 @@ mod tests {
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
 
         // Without color, no ANSI codes should be present in the stack trace
         assert!(!output.contains("\x1b["));
@@ -772,7 +804,7 @@ mod tests {
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
         args.compact = true;
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
 
         // Extras should be on the same line (compact), stack trace on new lines
         let lines: Vec<&str> = output.lines().collect();
@@ -789,7 +821,7 @@ mod tests {
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
 
         // Empty stack trace produces no additional lines (Rust's .lines() on "" yields nothing)
         let lines: Vec<&str> = output.lines().collect();
@@ -850,7 +882,7 @@ mod tests {
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         // ESC bytes should be stripped
         assert!(!output.contains('\x1b'));
         assert!(output.contains("evil[31m red text[0m"));
@@ -866,7 +898,7 @@ mod tests {
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
         args.compact = true;
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         assert!(!output.contains('\x1b'));
     }
 
@@ -877,7 +909,7 @@ mod tests {
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
-        let output = render(&record, &tokens, &color, &args);
+        let output = test_render(&record, &tokens, &color, &args);
         assert!(!output.contains('\x1b'));
         assert!(output.contains("Error[31m at line 1[0m"));
     }
