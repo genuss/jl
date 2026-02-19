@@ -81,12 +81,12 @@ Build a Rust CLI tool that reads JSON log lines from stdin or files and renders 
 - Create: `src/schema.rs`
 - Modify: `src/main.rs`
 
-- [ ] Create `src/schema.rs` with `Schema` enum (Logstash, Logrus, Bunyan, Generic) and `FieldMapping` struct mapping canonical roles (level, timestamp, logger, message, stack_trace) to actual JSON key name(s) for each schema
-- [ ] Implement `detect_schema(value: &serde_json::Value) -> Schema`: score each schema by counting matching field names in the JSON object. Bunyan bonus if `level` is numeric and `v` exists. Logstash bonus if `@timestamp` exists. Highest score wins; fallback to Generic
-- [ ] Implement `Schema::field_mapping(&self) -> FieldMapping` returning the appropriate key mappings
-- [ ] For Generic schema, implement fallback logic trying multiple common field name variants for each role (e.g., "message", "msg", "text" for message; "level", "severity", "loglevel" for level; etc.)
-- [ ] Write tests: detection with Logstash fields, Logrus fields, Bunyan fields (numeric level + v), ambiguous objects falling to Generic, forced schema selection
-- [ ] `cargo test` - must pass
+- [x] Create `src/schema.rs` with `Schema` enum (Logstash, Logrus, Bunyan, Generic) and `FieldMapping` struct mapping canonical roles (level, timestamp, logger, message, stack_trace) to actual JSON key name(s) for each schema
+- [x] Implement `detect_schema(value: &serde_json::Value) -> Schema`: score each schema by counting matching field names in the JSON object. Bunyan bonus if `level` is numeric and `v` exists. Logstash bonus if `@timestamp` exists. Highest score wins; fallback to Generic
+- [x] Implement `Schema::field_mapping(&self) -> FieldMapping` returning the appropriate key mappings
+- [x] For Generic schema, implement fallback logic trying multiple common field name variants for each role (e.g., "message", "msg", "text" for message; "level", "severity", "loglevel" for level; etc.)
+- [x] Write tests: detection with Logstash fields, Logrus fields, Bunyan fields (numeric level + v), ambiguous objects falling to Generic, forced schema selection
+- [x] `cargo test` - must pass
 
 ### Task 6: Log record extraction and timestamp handling
 
