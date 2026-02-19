@@ -64,14 +64,14 @@ Seven enhancements to the `jl` JSON log pretty-printer:
   - Modify: `src/cli.rs`
   - Modify: `src/timestamp.rs`
 
-  - [ ] Add `TsFormat` enum to `cli.rs` with variants `Time` and `Full`, deriving `ValueEnum`
-  - [ ] Add `ts_format` field to `Args` struct with `#[arg(long, value_enum, default_value_t = TsFormat::Time)]`
-  - [ ] Modify `format_timestamp()` signature to accept `ts_format: TsFormat` parameter (or pass it through `Args`)
-  - [ ] When `TsFormat::Time`, format as `%H:%M:%S%.3f` (e.g., `10:30:00.123`); when `TsFormat::Full`, use current format but without timezone offset (see task 4)
-  - [ ] Update `record.rs` where `format_timestamp` is called to pass the ts_format arg
-  - [ ] Write tests for both time and full formats
-  - [ ] Update `default_args()` helpers to include `ts_format`
-  - [ ] Run `cargo test` - must pass before task 4
+  - [x] Add `TsFormat` enum to `cli.rs` with variants `Time` and `Full`, deriving `ValueEnum`
+  - [x] Add `ts_format` field to `Args` struct with `#[arg(long, value_enum, default_value_t = TsFormat::Time)]`
+  - [x] Modify `format_timestamp()` signature to accept `ts_format: TsFormat` parameter (or pass it through `Args`)
+  - [x] When `TsFormat::Time`, format as `%H:%M:%S%.3f` (e.g., `10:30:00.123`); when `TsFormat::Full`, use current format but without timezone offset (see task 4)
+  - [x] Update `record.rs` where `format_timestamp` is called to pass the ts_format arg
+  - [x] Write tests for both time and full formats
+  - [x] Update `default_args()` helpers to include `ts_format`
+  - [x] Run `cargo test` - must pass before task 4
 
 ### Task 4: Remove timezone offset from timestamp output
 

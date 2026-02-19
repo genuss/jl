@@ -386,7 +386,7 @@ pub fn sanitize_control_chars(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::{ColorMode, LoggerFormat, NonJsonMode, SchemaChoice};
+    use crate::cli::{ColorMode, LoggerFormat, NonJsonMode, SchemaChoice, TsFormat};
     use crate::level::Level;
     use crate::record::LogRecord;
     use serde_json::json;
@@ -412,6 +412,7 @@ mod tests {
             schema: SchemaChoice::Auto,
             logger_format: LoggerFormat::AsIs,
             logger_length: 0,
+            ts_format: TsFormat::Full,
             min_level: None,
             raw_json: false,
             compact: false,

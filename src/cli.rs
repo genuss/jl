@@ -48,6 +48,10 @@ pub struct Args {
     #[arg(long, default_value_t = 30)]
     pub logger_length: usize,
 
+    /// How to format timestamps in output.
+    #[arg(long, value_enum, default_value_t = TsFormat::Time)]
+    pub ts_format: TsFormat,
+
     /// Minimum log level to display. Lines below this level are filtered out.
     #[arg(long)]
     pub min_level: Option<Level>,
@@ -109,6 +113,15 @@ pub enum LoggerFormat {
     AsIs,
 }
 
+/// How to format timestamps in output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum TsFormat {
+    /// Show time only: `HH:MM:SS.mmm`.
+    Time,
+    /// Show full date and time: `YYYY-MM-DDTHH:MM:SS.mmm`.
+    Full,
+}
+
 /// Which log schema to use for field mapping.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum SchemaChoice {
@@ -143,6 +156,7 @@ mod tests {
         assert_eq!(args.schema, SchemaChoice::Auto);
         assert_eq!(args.logger_format, LoggerFormat::ShortDots);
         assert_eq!(args.logger_length, 30);
+        assert_eq!(args.ts_format, TsFormat::Time);
         assert!(args.min_level.is_none());
         assert!(!args.raw_json);
         assert!(!args.compact);

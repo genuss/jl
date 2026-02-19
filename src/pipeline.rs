@@ -108,7 +108,7 @@ fn process_source(
                     }
                 };
 
-                let record = LogRecord::extract(value, mapping, &args.tz)?;
+                let record = LogRecord::extract(value, mapping, &args.tz, args.ts_format)?;
 
                 // Apply --min-level filter
                 if let Some(ref min_level) = args.min_level {
@@ -140,7 +140,7 @@ fn process_source(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::{ColorMode, LoggerFormat, NonJsonMode, SchemaChoice};
+    use crate::cli::{ColorMode, LoggerFormat, NonJsonMode, SchemaChoice, TsFormat};
     use crate::level::Level;
     use std::io::Write;
     use std::path::PathBuf;
@@ -156,6 +156,7 @@ mod tests {
             schema: SchemaChoice::Auto,
             logger_format: LoggerFormat::AsIs,
             logger_length: 0,
+            ts_format: TsFormat::Full,
             min_level: None,
             raw_json: false,
             compact: false,

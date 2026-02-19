@@ -2,6 +2,7 @@ use chrono::{DateTime, FixedOffset, Local, TimeZone, Utc};
 use chrono_tz::Tz;
 use serde_json::Value;
 
+use crate::cli::TsFormat;
 use crate::error::JlError;
 
 /// Attempt to parse a JSON value as a timestamp.
@@ -77,22 +78,34 @@ fn parse_epoch(value: f64) -> Option<DateTime<FixedOffset>> {
 /// - "local" - use the system local timezone
 /// - "utc" or "UTC" - use UTC
 /// - An IANA timezone name (e.g. "America/New_York", "Europe/London")
-pub fn format_timestamp(ts: &DateTime<FixedOffset>, tz: &str) -> Result<String, JlError> {
+///
+/// `ts_format` controls the output format:
+/// - `TsFormat::Time` - time only: `HH:MM:SS.mmm`
+/// - `TsFormat::Full` - full date and time: `YYYY-MM-DDTHH:MM:SS.mmm` with timezone
+pub fn format_timestamp(
+    ts: &DateTime<FixedOffset>,
+    tz: &str,
+    ts_format: TsFormat,
+) -> Result<String, JlError> {
+    let (full_fmt, full_fmt_utc) = match ts_format {
+        TsFormat::Time => ("%H:%M:%S%.3f", "%H:%M:%S%.3f"),
+        TsFormat::Full => ("%Y-%m-%dT%H:%M:%S%.3f%:z", "%Y-%m-%dT%H:%M:%S%.3fZ"),
+    };
     let formatted = match tz.to_ascii_lowercase().as_str() {
         "local" => {
             let local_dt = ts.with_timezone(&Local);
-            local_dt.format("%Y-%m-%dT%H:%M:%S%.3f%:z").to_string()
+            local_dt.format(full_fmt).to_string()
         }
         "utc" => {
             let utc_dt = ts.with_timezone(&Utc);
-            utc_dt.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
+            utc_dt.format(full_fmt_utc).to_string()
         }
         _ => {
             let named_tz: Tz = tz
                 .parse()
                 .map_err(|_| JlError::Tz(format!("unknown timezone: {tz}")))?;
             let converted = ts.with_timezone(&named_tz);
-            converted.format("%Y-%m-%dT%H:%M:%S%.3f%:z").to_string()
+            converted.format(full_fmt).to_string()
         }
     };
     Ok(formatted)
@@ -218,21 +231,21 @@ mod tests {
     #[test]
     fn format_utc() {
         let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
-        let formatted = format_timestamp(&ts, "utc").unwrap();
+        let formatted = format_timestamp(&ts, "utc", TsFormat::Full).unwrap();
         assert_eq!(formatted, "2024-01-15T10:30:00.000Z");
     }
 
     #[test]
     fn format_utc_uppercase() {
         let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
-        let formatted = format_timestamp(&ts, "UTC").unwrap();
+        let formatted = format_timestamp(&ts, "UTC", TsFormat::Full).unwrap();
         assert_eq!(formatted, "2024-01-15T10:30:00.000Z");
     }
 
     #[test]
     fn format_named_timezone() {
         let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
-        let formatted = format_timestamp(&ts, "America/New_York").unwrap();
+        let formatted = format_timestamp(&ts, "America/New_York", TsFormat::Full).unwrap();
         // EST is UTC-5
         assert_eq!(formatted, "2024-01-15T05:30:00.000-05:00");
     }
@@ -240,7 +253,7 @@ mod tests {
     #[test]
     fn format_named_timezone_positive_offset() {
         let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
-        let formatted = format_timestamp(&ts, "Asia/Tokyo").unwrap();
+        let formatted = format_timestamp(&ts, "Asia/Tokyo", TsFormat::Full).unwrap();
         // JST is UTC+9
         assert_eq!(formatted, "2024-01-15T19:30:00.000+09:00");
     }
@@ -248,7 +261,7 @@ mod tests {
     #[test]
     fn format_local_timezone() {
         let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
-        let formatted = format_timestamp(&ts, "local").unwrap();
+        let formatted = format_timestamp(&ts, "local", TsFormat::Full).unwrap();
         // Can't assert exact value since it depends on the system timezone,
         // but it should be a valid timestamp string
         assert!(formatted.contains("2024-01-15"));
@@ -258,7 +271,7 @@ mod tests {
     #[test]
     fn format_invalid_timezone() {
         let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
-        let result = format_timestamp(&ts, "Invalid/Timezone");
+        let result = format_timestamp(&ts, "Invalid/Timezone", TsFormat::Full);
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(format!("{err}").contains("unknown timezone"));
@@ -267,7 +280,7 @@ mod tests {
     #[test]
     fn format_preserves_subsecond_precision() {
         let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00.123+00:00").unwrap();
-        let formatted = format_timestamp(&ts, "utc").unwrap();
+        let formatted = format_timestamp(&ts, "utc", TsFormat::Full).unwrap();
         assert!(formatted.contains(".123"));
     }
 
@@ -275,7 +288,49 @@ mod tests {
     fn format_with_source_offset() {
         // Timestamp with +05:30 offset, display in UTC
         let ts = DateTime::parse_from_rfc3339("2024-01-15T16:00:00+05:30").unwrap();
-        let formatted = format_timestamp(&ts, "utc").unwrap();
+        let formatted = format_timestamp(&ts, "utc", TsFormat::Full).unwrap();
         assert_eq!(formatted, "2024-01-15T10:30:00.000Z");
+    }
+
+    // --- TsFormat::Time tests ---
+
+    #[test]
+    fn format_time_only_utc() {
+        let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
+        let formatted = format_timestamp(&ts, "utc", TsFormat::Time).unwrap();
+        assert_eq!(formatted, "10:30:00.000");
+    }
+
+    #[test]
+    fn format_time_only_with_millis() {
+        let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00.123+00:00").unwrap();
+        let formatted = format_timestamp(&ts, "utc", TsFormat::Time).unwrap();
+        assert_eq!(formatted, "10:30:00.123");
+    }
+
+    #[test]
+    fn format_time_only_named_timezone() {
+        let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
+        let formatted = format_timestamp(&ts, "America/New_York", TsFormat::Time).unwrap();
+        // EST is UTC-5, so 10:30 UTC = 05:30 EST
+        assert_eq!(formatted, "05:30:00.000");
+    }
+
+    #[test]
+    fn format_time_only_local() {
+        let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
+        let formatted = format_timestamp(&ts, "local", TsFormat::Time).unwrap();
+        // Can't assert exact value since it depends on the system timezone,
+        // but it should contain just time components (no date)
+        assert!(!formatted.contains("2024"));
+        assert!(formatted.contains(":"));
+        assert!(formatted.contains("."));
+    }
+
+    #[test]
+    fn format_time_only_invalid_timezone() {
+        let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
+        let result = format_timestamp(&ts, "Invalid/Timezone", TsFormat::Time);
+        assert!(result.is_err());
     }
 }

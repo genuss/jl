@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
+use crate::cli::TsFormat;
 use crate::error::JlError;
 use crate::level::Level;
 use crate::schema::FieldMapping;
@@ -25,7 +26,12 @@ impl LogRecord {
     /// Pulls canonical fields (level, timestamp, logger, message, stack_trace)
     /// based on the mapping, parses level (string or Bunyan numeric), formats
     /// the timestamp using the given timezone, and collects remaining fields as extras.
-    pub fn extract(value: Value, mapping: &FieldMapping, tz: &str) -> Result<LogRecord, JlError> {
+    pub fn extract(
+        value: Value,
+        mapping: &FieldMapping,
+        tz: &str,
+        ts_format: TsFormat,
+    ) -> Result<LogRecord, JlError> {
         let obj = match value.as_object() {
             Some(o) => o,
             None => {
@@ -58,7 +64,7 @@ impl LogRecord {
         let timestamp = match ts_key.as_deref() {
             Some(key) => match obj.get(key) {
                 Some(val) => match timestamp::parse_timestamp(val) {
-                    Some(ts) => Some(timestamp::format_timestamp(&ts, tz)?),
+                    Some(ts) => Some(timestamp::format_timestamp(&ts, tz, ts_format)?),
                     None => Some(value_to_string(val)),
                 },
                 None => None,
@@ -145,7 +151,7 @@ mod tests {
             "message": "Application started",
             "thread_name": "main"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert_eq!(record.level, Some(Level::Info));
         assert!(record.timestamp.as_ref().unwrap().contains("2024-01-15"));
         assert_eq!(record.logger.as_deref(), Some("com.example.App"));
@@ -166,7 +172,7 @@ mod tests {
             "message": "Something failed",
             "stack_trace": "java.lang.NullPointerException\n\tat com.example.Foo.bar(Foo.java:42)"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert_eq!(record.level, Some(Level::Error));
         assert!(record.stack_trace.is_some());
         assert!(
@@ -190,7 +196,7 @@ mod tests {
             "component": "database",
             "retry_count": 3
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert_eq!(record.level, Some(Level::Warn));
         assert!(record.timestamp.is_some());
         assert_eq!(record.logger.as_deref(), Some("database"));
@@ -212,7 +218,7 @@ mod tests {
             "time": "2024-01-15T10:30:00.000Z",
             "msg": "request completed"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert_eq!(record.level, Some(Level::Info));
         assert_eq!(record.logger.as_deref(), Some("myapp"));
         assert_eq!(record.message.as_deref(), Some("request completed"));
@@ -232,7 +238,7 @@ mod tests {
             "time": "2024-01-15T10:30:00Z",
             "msg": "fatal error"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert_eq!(record.level, Some(Level::Error));
     }
 
@@ -246,7 +252,7 @@ mod tests {
             "time": "2024-01-15T10:30:00Z",
             "msg": "system shutdown"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert_eq!(record.level, Some(Level::Fatal));
     }
 
@@ -262,7 +268,7 @@ mod tests {
             "text": "User login attempt",
             "user_id": "abc123"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert_eq!(record.level, Some(Level::Debug));
         assert!(record.timestamp.is_some());
         assert_eq!(record.logger.as_deref(), Some("auth_service"));
@@ -277,7 +283,7 @@ mod tests {
             "level": "error",
             "msg": "failed to connect"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert_eq!(record.level, Some(Level::Error));
         assert_eq!(record.message.as_deref(), Some("failed to connect"));
     }
@@ -288,7 +294,7 @@ mod tests {
     fn extract_non_object_value() {
         let mapping = Schema::Logstash.field_mapping();
         let value = json!("just a string");
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert!(record.level.is_none());
         assert!(record.timestamp.is_none());
         assert_eq!(record.message.as_deref(), Some("\"just a string\""));
@@ -299,7 +305,7 @@ mod tests {
     fn extract_empty_object() {
         let mapping = Schema::Logstash.field_mapping();
         let value = json!({});
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert!(record.level.is_none());
         assert!(record.timestamp.is_none());
         assert!(record.logger.is_none());
@@ -314,7 +320,7 @@ mod tests {
             "level": "WARN",
             "message": "incomplete record"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert_eq!(record.level, Some(Level::Warn));
         assert!(record.timestamp.is_none());
         assert!(record.logger.is_none());
@@ -328,7 +334,7 @@ mod tests {
             "level": "VERBOSE",
             "message": "test"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         // "VERBOSE" is not a recognized level
         assert!(record.level.is_none());
     }
@@ -340,7 +346,7 @@ mod tests {
             "level": 99,
             "msg": "test"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert!(record.level.is_none());
     }
 
@@ -351,7 +357,7 @@ mod tests {
             "level": "INFO",
             "message": 42
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert_eq!(record.message.as_deref(), Some("42"));
     }
 
@@ -363,7 +369,7 @@ mod tests {
             "timestamp": 1705314600,
             "message": "epoch seconds"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert!(record.timestamp.is_some());
         let ts = record.timestamp.unwrap();
         assert!(ts.contains("2024-01-15"));
@@ -378,7 +384,7 @@ mod tests {
             "timestamp": 1705314600123_i64,
             "message": "epoch millis"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert!(record.timestamp.is_some());
         let ts = record.timestamp.unwrap();
         assert!(ts.contains("2024-01-15"));
@@ -393,7 +399,7 @@ mod tests {
             "level": "INFO",
             "message": "timezone test"
         });
-        let record = LogRecord::extract(value, &mapping, "America/New_York").unwrap();
+        let record = LogRecord::extract(value, &mapping, "America/New_York", TsFormat::Full).unwrap();
         let ts = record.timestamp.unwrap();
         assert!(ts.contains("05:30:00"));
         assert!(ts.contains("-05:00"));
@@ -407,7 +413,7 @@ mod tests {
             "level": "INFO",
             "message": "bad tz"
         });
-        let result = LogRecord::extract(value, &mapping, "Invalid/Zone");
+        let result = LogRecord::extract(value, &mapping, "Invalid/Zone", TsFormat::Full);
         assert!(result.is_err());
     }
 
@@ -419,7 +425,7 @@ mod tests {
             "level": "INFO",
             "message": "test"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         // Unparseable timestamp should be kept as the raw string
         assert_eq!(record.timestamp.as_deref(), Some("not-a-date"));
     }
@@ -435,7 +441,7 @@ mod tests {
             "extra1": "value1",
             "extra2": 42
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         // Only extra1 and extra2 should be in extras
         assert_eq!(record.extras.len(), 2);
         assert!(record.extras.contains_key("extra1"));
@@ -454,7 +460,7 @@ mod tests {
             "level": "INFO",
             "message": "original"
         });
-        let record = LogRecord::extract(value.clone(), &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value.clone(), &mapping, "utc", TsFormat::Full).unwrap();
         assert_eq!(record.raw, value);
     }
 
@@ -466,7 +472,7 @@ mod tests {
                 "level": level_str,
                 "message": "test"
             });
-            let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+            let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
             assert_eq!(record.level, Some(Level::Info), "Failed for: {level_str}");
         }
     }
@@ -478,7 +484,7 @@ mod tests {
             "level": true,
             "message": "test"
         });
-        let record = LogRecord::extract(value, &mapping, "utc").unwrap();
+        let record = LogRecord::extract(value, &mapping, "utc", TsFormat::Full).unwrap();
         assert!(record.level.is_none());
     }
 }
