@@ -1,8 +1,13 @@
+mod cli;
 #[allow(dead_code)]
 mod error;
 #[allow(dead_code)]
 mod level;
 
+use clap::Parser;
+
+use cli::Args;
+
 fn main() {
-    println!("Hello, world!");
+    let _args = Args::parse();
 }

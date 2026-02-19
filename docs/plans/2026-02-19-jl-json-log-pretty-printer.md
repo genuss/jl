@@ -44,11 +44,11 @@ Build a Rust CLI tool that reads JSON log lines from stdin or files and renders 
 - Create: `src/cli.rs`
 - Modify: `src/main.rs`
 
-- [ ] Create `src/cli.rs` with clap derive `Args` struct containing all CLI options: `format` (String, default template), `add_fields` (Option<String>), `omit_fields` (Option<String>), `color` (ColorMode enum: Auto/Always/Never), `non_json` (NonJsonMode enum: PrintAsIs/Skip/Fail), `schema` (SchemaChoice enum: Auto/Logstash/Logrus/Bunyan/Generic), `min_level` (Option<Level>), `raw_json` (bool), `compact` (bool), `tz` (String, default "local"), `follow` (bool), `output` (Option<PathBuf>), `files` (Vec<PathBuf> positional)
-- [ ] Implement `ValueEnum` for `ColorMode`, `NonJsonMode`, `SchemaChoice`; implement `FromStr` for `Level` to work with clap
-- [ ] Update `src/main.rs` to add `mod cli;` and parse args with `Args::parse()`
-- [ ] Write tests verifying default values and parsing of various option combinations
-- [ ] `cargo test` - must pass
+- [x] Create `src/cli.rs` with clap derive `Args` struct containing all CLI options: `format` (String, default template), `add_fields` (Option<String>), `omit_fields` (Option<String>), `color` (ColorMode enum: Auto/Always/Never), `non_json` (NonJsonMode enum: PrintAsIs/Skip/Fail), `schema` (SchemaChoice enum: Auto/Logstash/Logrus/Bunyan/Generic), `min_level` (Option<Level>), `raw_json` (bool), `compact` (bool), `tz` (String, default "local"), `follow` (bool), `output` (Option<PathBuf>), `files` (Vec<PathBuf> positional)
+- [x] Implement `ValueEnum` for `ColorMode`, `NonJsonMode`, `SchemaChoice`; implement `FromStr` for `Level` to work with clap
+- [x] Update `src/main.rs` to add `mod cli;` and parse args with `Args::parse()`
+- [x] Write tests verifying default values and parsing of various option combinations
+- [x] `cargo test` - must pass
 
 ### Task 3: Input and output abstractions
 
