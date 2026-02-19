@@ -110,12 +110,12 @@ Build a Rust CLI tool that reads JSON log lines from stdin or files and renders 
 - Create: `src/format.rs`
 - Modify: `src/main.rs`
 
-- [ ] Create `src/color.rs` with `ColorConfig` struct: `enabled: bool` + `level_color(level: &Level) -> Style` mapping (Trace=dim, Debug=blue, Info=green, Warn=yellow, Error=red, Fatal=red+bold). Use `owo-colors` for styling. Determine `enabled` from `ColorMode` + `is-terminal`
-- [ ] Create `src/format.rs` with `FormatToken` enum: `Literal(String)`, `Field(CanonicalField)`, `CustomField(String)`. Implement `parse_template(template: &str) -> Vec<FormatToken>` parsing `{field_name}` placeholders
-- [ ] Implement `render(record: &LogRecord, tokens: &[FormatToken], color: &ColorConfig, args: &Args) -> String`: substitute fields, apply colors to level, handle `--add-fields`/`--omit-fields`, `--compact` (extras on same line), `--raw-json` (output as JSON), and stack trace appending
-- [ ] Write tests for template parsing (default template, custom fields, literals only, adjacent fields)
-- [ ] Write tests for rendering with and without color, with extras, with omit/add fields, compact mode
-- [ ] `cargo test` - must pass
+- [x] Create `src/color.rs` with `ColorConfig` struct: `enabled: bool` + `level_color(level: &Level) -> Style` mapping (Trace=dim, Debug=blue, Info=green, Warn=yellow, Error=red, Fatal=red+bold). Use `owo-colors` for styling. Determine `enabled` from `ColorMode` + `is-terminal`
+- [x] Create `src/format.rs` with `FormatToken` enum: `Literal(String)`, `Field(CanonicalField)`, `CustomField(String)`. Implement `parse_template(template: &str) -> Vec<FormatToken>` parsing `{field_name}` placeholders
+- [x] Implement `render(record: &LogRecord, tokens: &[FormatToken], color: &ColorConfig, args: &Args) -> String`: substitute fields, apply colors to level, handle `--add-fields`/`--omit-fields`, `--compact` (extras on same line), `--raw-json` (output as JSON), and stack trace appending
+- [x] Write tests for template parsing (default template, custom fields, literals only, adjacent fields)
+- [x] Write tests for rendering with and without color, with extras, with omit/add fields, compact mode
+- [x] `cargo test` - must pass
 
 ### Task 8: Pipeline and main entry point
 

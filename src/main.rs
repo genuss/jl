@@ -1,6 +1,10 @@
 mod cli;
 #[allow(dead_code)]
+mod color;
+#[allow(dead_code)]
 mod error;
+#[allow(dead_code)]
+mod format;
 #[allow(dead_code)]
 mod input;
 #[allow(dead_code)]
