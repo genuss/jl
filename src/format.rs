@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use owo_colors::{OwoColorize, Style};
 use serde_json::Value;
 
 use crate::cli::Args;
@@ -170,19 +171,33 @@ pub fn render(
     if let Some(ref st) = record.stack_trace
         && !omit_fields.contains("stack_trace")
     {
-        line.push('\n');
-        for trace_line in st.lines() {
-            line.push_str("  ");
-            line.push_str(trace_line);
-            line.push('\n');
-        }
-        // Remove trailing newline
-        if line.ends_with('\n') {
-            line.pop();
-        }
+        append_stack_trace(&mut line, st, color);
     }
 
     line
+}
+
+/// Append a stack trace to the output line with indentation and optional dimming.
+///
+/// Each line of the stack trace is indented with 4 spaces. When color is enabled,
+/// the entire stack trace is rendered in a dimmed style for visual distinction
+/// from the main log line.
+fn append_stack_trace(line: &mut String, stack_trace: &str, color: &ColorConfig) {
+    let dim_style = if color.enabled {
+        Style::new().dimmed()
+    } else {
+        Style::new()
+    };
+
+    for trace_line in stack_trace.lines() {
+        line.push('\n');
+        let indented = format!("    {trace_line}");
+        if color.enabled {
+            line.push_str(&format!("{}", indented.style(dim_style)));
+        } else {
+            line.push_str(&indented);
+        }
+    }
 }
 
 /// Collect extra fields to display, respecting --add-fields, --omit-fields,
@@ -505,8 +520,8 @@ mod tests {
         let args = default_args();
         let output = render(&record, &tokens, &color, &args);
         assert!(output.contains("ERROR: crash"));
-        assert!(output.contains("\n  java.lang.NullPointerException"));
-        assert!(output.contains("\n  \tat Foo.bar(Foo.java:42)"));
+        assert!(output.contains("\n    java.lang.NullPointerException"));
+        assert!(output.contains("\n    \tat Foo.bar(Foo.java:42)"));
     }
 
     #[test]
@@ -620,5 +635,126 @@ mod tests {
         let result = format_extra_value(&val);
         assert!(result.contains("key"));
         assert!(result.contains("val"));
+    }
+
+    // --- Stack trace formatting tests ---
+
+    #[test]
+    fn stack_trace_multiline_indentation() {
+        let mut record = make_record(Some(Level::Error), None, None, Some("crash"));
+        record.stack_trace = Some(
+            "java.lang.NullPointerException: null\n\
+             \tat com.example.Service.process(Service.java:42)\n\
+             \tat com.example.Controller.handle(Controller.java:15)\n\
+             Caused by: java.io.IOException: connection reset\n\
+             \tat com.example.Client.connect(Client.java:88)"
+                .to_string(),
+        );
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(false);
+        let args = default_args();
+        let output = render(&record, &tokens, &color, &args);
+
+        let lines: Vec<&str> = output.lines().collect();
+        // First line is the log message
+        assert_eq!(lines[0], "ERROR: crash");
+        // Each stack trace line should be indented with 4 spaces
+        assert_eq!(lines[1], "    java.lang.NullPointerException: null");
+        assert_eq!(
+            lines[2],
+            "    \tat com.example.Service.process(Service.java:42)"
+        );
+        assert_eq!(
+            lines[3],
+            "    \tat com.example.Controller.handle(Controller.java:15)"
+        );
+        assert_eq!(
+            lines[4],
+            "    Caused by: java.io.IOException: connection reset"
+        );
+        assert_eq!(
+            lines[5],
+            "    \tat com.example.Client.connect(Client.java:88)"
+        );
+        assert_eq!(lines.len(), 6);
+    }
+
+    #[test]
+    fn stack_trace_single_line() {
+        let mut record = make_record(Some(Level::Error), None, None, Some("oops"));
+        record.stack_trace = Some("Error: something went wrong".to_string());
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(false);
+        let args = default_args();
+        let output = render(&record, &tokens, &color, &args);
+
+        let lines: Vec<&str> = output.lines().collect();
+        assert_eq!(lines[0], "ERROR: oops");
+        assert_eq!(lines[1], "    Error: something went wrong");
+        assert_eq!(lines.len(), 2);
+    }
+
+    #[test]
+    fn stack_trace_dimmed_with_color() {
+        let mut record = make_record(Some(Level::Error), None, None, Some("fail"));
+        record.stack_trace = Some("StackLine1\nStackLine2".to_string());
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(true);
+        let args = default_args();
+        let output = render(&record, &tokens, &color, &args);
+
+        // With color enabled, stack trace lines should contain ANSI dimmed code (\x1b[2m)
+        assert!(output.contains("\x1b[2m"));
+        assert!(output.contains("StackLine1"));
+        assert!(output.contains("StackLine2"));
+    }
+
+    #[test]
+    fn stack_trace_no_ansi_without_color() {
+        let mut record = make_record(Some(Level::Error), None, None, Some("fail"));
+        record.stack_trace = Some("StackLine1\nStackLine2".to_string());
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(false);
+        let args = default_args();
+        let output = render(&record, &tokens, &color, &args);
+
+        // Without color, no ANSI codes should be present in the stack trace
+        assert!(!output.contains("\x1b["));
+        assert!(output.contains("    StackLine1"));
+        assert!(output.contains("    StackLine2"));
+    }
+
+    #[test]
+    fn stack_trace_with_extras_and_compact() {
+        let mut record = make_record(Some(Level::Error), None, None, Some("fail"));
+        record.stack_trace = Some("Error\n\tat line 1".to_string());
+        record.extras.insert("host".to_string(), json!("server1"));
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(false);
+        let mut args = default_args();
+        args.compact = true;
+        let output = render(&record, &tokens, &color, &args);
+
+        // Extras should be on the same line (compact), stack trace on new lines
+        let lines: Vec<&str> = output.lines().collect();
+        assert!(lines[0].contains("ERROR: fail"));
+        assert!(lines[0].contains("host=server1"));
+        assert_eq!(lines[1], "    Error");
+        assert_eq!(lines[2], "    \tat line 1");
+    }
+
+    #[test]
+    fn stack_trace_empty_string() {
+        let mut record = make_record(Some(Level::Error), None, None, Some("fail"));
+        record.stack_trace = Some("".to_string());
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(false);
+        let args = default_args();
+        let output = render(&record, &tokens, &color, &args);
+
+        // Empty stack trace produces no additional lines (Rust's .lines() on "" yields nothing)
+        let lines: Vec<&str> = output.lines().collect();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0], "ERROR: fail");
     }
 }

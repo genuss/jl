@@ -138,10 +138,10 @@ Build a Rust CLI tool that reads JSON log lines from stdin or files and renders 
 - Modify: `src/input.rs`
 - Modify: `src/format.rs`
 
-- [ ] Add `FollowSource` to `src/input.rs`: tail a file, sleeping briefly and retrying when EOF is reached (loop with `thread::sleep` + re-read), return lines as they appear
-- [ ] Add stack trace pretty-printing in `src/format.rs`: when `stack_trace` is present, append it on new lines after the main log line, indented, optionally dimmed
-- [ ] Write tests for stack trace formatting (multiline, indentation)
-- [ ] `cargo test` - must pass
+- [x] Add `FollowSource` to `src/input.rs`: tail a file, sleeping briefly and retrying when EOF is reached (loop with `thread::sleep` + re-read), return lines as they appear
+- [x] Add stack trace pretty-printing in `src/format.rs`: when `stack_trace` is present, append it on new lines after the main log line, indented, optionally dimmed
+- [x] Write tests for stack trace formatting (multiline, indentation)
+- [x] `cargo test` - must pass
 
 ### Task 10: Integration tests
 

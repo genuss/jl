@@ -2,7 +2,7 @@ use crate::cli::Args;
 use crate::color::ColorConfig;
 use crate::error::JlError;
 use crate::format;
-use crate::input::{FileSource, LineSource, StdinSource};
+use crate::input::{FileSource, FollowSource, LineSource, StdinSource};
 use crate::output::{FileSink, OutputSink, StdoutSink};
 use crate::parse::{self, ParseResult};
 use crate::record::LogRecord;
@@ -21,6 +21,17 @@ pub fn run(args: Args) -> Result<(), JlError> {
     if args.files.is_empty() {
         let mut source = StdinSource::new();
         process_source(&mut source, &mut *output, &tokens, &color, &args)?;
+    } else if args.follow {
+        // Follow mode: tail the last file, reading existing content then waiting for new lines
+        // Process any preceding files normally first
+        for path in &args.files[..args.files.len().saturating_sub(1)] {
+            let mut source = FileSource::new(path)?;
+            process_source(&mut source, &mut *output, &tokens, &color, &args)?;
+        }
+        if let Some(path) = args.files.last() {
+            let mut source = FollowSource::new(path)?;
+            process_source(&mut source, &mut *output, &tokens, &color, &args)?;
+        }
     } else {
         for path in &args.files {
             let mut source = FileSource::new(path)?;
