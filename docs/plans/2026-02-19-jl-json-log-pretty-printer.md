@@ -148,7 +148,7 @@ Build a Rust CLI tool that reads JSON log lines from stdin or files and renders 
 **Files:**
 - Create: `tests/cli_tests.rs`
 
-- [ ] Write integration tests using `assert_cmd` and `predicates`:
+- [x] Write integration tests using `assert_cmd` and `predicates`:
   - Pipe Logstash JSON to stdin, verify colorized output contains expected fields
   - Pipe Bunyan JSON (numeric level), verify correct level name in output
   - Pipe non-JSON line with `--non-json skip`, verify it is omitted
@@ -159,7 +159,7 @@ Build a Rust CLI tool that reads JSON log lines from stdin or files and renders 
   - Test `--format` with custom template
   - Test file input (write temp file, pass as positional arg)
   - Test `-o` output file option
-- [ ] `cargo test` - must pass
+- [x] `cargo test` - must pass
 
 ### Task 11: Verify acceptance criteria
 
