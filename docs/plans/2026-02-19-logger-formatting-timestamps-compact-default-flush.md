@@ -50,12 +50,12 @@ Seven enhancements to the `jl` JSON log pretty-printer:
   - Modify: `src/cli.rs`
   - Modify: `src/format.rs`
 
-  - [ ] Add `logger_length` field to `Args` struct: `#[arg(long, default_value_t = 30)]` as `usize`
-  - [ ] Add `truncate_logger_left(name: &str, max_len: usize) -> String` function in `format.rs` that crops from the left side when the name exceeds max length (respecting dot boundaries when possible: strip leftmost `segment.` chunks until it fits, then hard-truncate if still too long)
-  - [ ] In `format.rs::render()`, apply logger length truncation after format transformation
-  - [ ] Write unit tests: name shorter than max (unchanged), name exactly at max, name longer than max with dot segments, name longer than max without dots
-  - [ ] Update `default_args()` helpers to include `logger_length`
-  - [ ] Run `cargo test` - must pass before task 3
+  - [x] Add `logger_length` field to `Args` struct: `#[arg(long, default_value_t = 30)]` as `usize`
+  - [x] Add `truncate_logger_left(name: &str, max_len: usize) -> String` function in `format.rs` that crops from the left side when the name exceeds max length (respecting dot boundaries when possible: strip leftmost `segment.` chunks until it fits, then hard-truncate if still too long)
+  - [x] In `format.rs::render()`, apply logger length truncation after format transformation
+  - [x] Write unit tests: name shorter than max (unchanged), name exactly at max, name longer than max with dot segments, name longer than max without dots
+  - [x] Update `default_args()` helpers to include `logger_length`
+  - [x] Run `cargo test` - must pass before task 3
 
 ### Task 3: Add `--ts-format` argument and time-only mode
 

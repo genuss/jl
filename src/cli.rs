@@ -44,6 +44,10 @@ pub struct Args {
     #[arg(long, value_enum, default_value_t = LoggerFormat::ShortDots)]
     pub logger_format: LoggerFormat,
 
+    /// Maximum display length for logger names (crops from left when exceeded).
+    #[arg(long, default_value_t = 30)]
+    pub logger_length: usize,
+
     /// Minimum log level to display. Lines below this level are filtered out.
     #[arg(long)]
     pub min_level: Option<Level>,
@@ -138,6 +142,7 @@ mod tests {
         assert_eq!(args.non_json, NonJsonMode::PrintAsIs);
         assert_eq!(args.schema, SchemaChoice::Auto);
         assert_eq!(args.logger_format, LoggerFormat::ShortDots);
+        assert_eq!(args.logger_length, 30);
         assert!(args.min_level.is_none());
         assert!(!args.raw_json);
         assert!(!args.compact);

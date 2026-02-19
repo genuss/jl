@@ -155,6 +155,7 @@ mod tests {
             non_json: NonJsonMode::PrintAsIs,
             schema: SchemaChoice::Auto,
             logger_format: LoggerFormat::AsIs,
+            logger_length: 0,
             min_level: None,
             raw_json: false,
             compact: false,

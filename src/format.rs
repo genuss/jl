@@ -154,7 +154,9 @@ pub fn render(
                             crate::cli::LoggerFormat::ShortDots => shorten_logger_dots(&raw),
                             crate::cli::LoggerFormat::AsIs => raw,
                         };
-                        sanitize_control_chars(&formatted)
+                        let truncated =
+                            truncate_logger_left(&formatted, args.logger_length);
+                        sanitize_control_chars(&truncated)
                     }
                     CanonicalField::Message => {
                         sanitize_control_chars(&record.message.clone().unwrap_or_default())
@@ -324,6 +326,45 @@ pub fn shorten_logger_dots(name: &str) -> String {
     parts.join(".")
 }
 
+/// Truncate a logger name from the left when it exceeds `max_len`.
+///
+/// First tries to strip leftmost dot-separated segments one at a time until the name fits.
+/// If the name still exceeds `max_len` after stripping all removable segments (or has no dots),
+/// hard-truncates from the left to exactly `max_len` characters.
+///
+/// A `max_len` of 0 means no truncation (unlimited).
+///
+/// Examples:
+/// - `truncate_logger_left("c.e.s.MyHandler", 15)` → `"c.e.s.MyHandler"` (fits)
+/// - `truncate_logger_left("c.e.s.MyHandler", 13)` → `"e.s.MyHandler"` (stripped "c.")
+/// - `truncate_logger_left("VeryLongName", 4)` → `"Name"` (hard-truncated)
+pub fn truncate_logger_left(name: &str, max_len: usize) -> String {
+    if max_len == 0 || name.len() <= max_len {
+        return name.to_string();
+    }
+
+    // Try stripping leftmost dot-segments one at a time
+    let mut remaining = name;
+    while remaining.len() > max_len {
+        if let Some(dot_pos) = remaining.find('.') {
+            let after_dot = &remaining[dot_pos + 1..];
+            if after_dot.is_empty() {
+                break;
+            }
+            remaining = after_dot;
+        } else {
+            break;
+        }
+    }
+
+    // If still too long, hard-truncate from the left
+    if remaining.len() > max_len {
+        remaining[remaining.len() - max_len..].to_string()
+    } else {
+        remaining.to_string()
+    }
+}
+
 /// Strip terminal control characters from a string to prevent escape sequence injection.
 ///
 /// Removes C0 control characters (0x00-0x1F) except TAB (0x09) and newline (0x0A),
@@ -370,6 +411,7 @@ mod tests {
             non_json: NonJsonMode::PrintAsIs,
             schema: SchemaChoice::Auto,
             logger_format: LoggerFormat::AsIs,
+            logger_length: 0,
             min_level: None,
             raw_json: false,
             compact: false,
@@ -999,6 +1041,58 @@ mod tests {
         assert_eq!(shorten_logger_dots("org.apache.Logger"), "o.a.Logger");
     }
 
+    // --- truncate_logger_left tests ---
+
+    #[test]
+    fn truncate_logger_left_shorter_than_max() {
+        assert_eq!(truncate_logger_left("c.e.s.MyHandler", 30), "c.e.s.MyHandler");
+    }
+
+    #[test]
+    fn truncate_logger_left_exactly_at_max() {
+        assert_eq!(truncate_logger_left("c.e.s.MyHandler", 15), "c.e.s.MyHandler");
+    }
+
+    #[test]
+    fn truncate_logger_left_longer_with_dots() {
+        // "c.e.s.MyHandler" is 15 chars, max 13 -> strip "c." -> "e.s.MyHandler" (13 chars)
+        assert_eq!(truncate_logger_left("c.e.s.MyHandler", 13), "e.s.MyHandler");
+    }
+
+    #[test]
+    fn truncate_logger_left_strip_multiple_segments() {
+        // "com.example.service.Handler" is 27 chars, max 15 -> strip "com." -> "example.service.Handler" (23) -> strip "example." -> "service.Handler" (15)
+        assert_eq!(
+            truncate_logger_left("com.example.service.Handler", 15),
+            "service.Handler"
+        );
+    }
+
+    #[test]
+    fn truncate_logger_left_longer_without_dots() {
+        // No dots, must hard-truncate from left
+        assert_eq!(truncate_logger_left("VeryLongLoggerName", 4), "Name");
+    }
+
+    #[test]
+    fn truncate_logger_left_hard_truncate_after_dot_stripping() {
+        // "a.VeryLongSegment" -> strip "a." -> "VeryLongSegment" (15 chars), max 4 -> hard truncate -> "ment"
+        assert_eq!(truncate_logger_left("a.VeryLongSegment", 4), "ment");
+    }
+
+    #[test]
+    fn truncate_logger_left_zero_means_unlimited() {
+        assert_eq!(
+            truncate_logger_left("com.example.service.MyHandler", 0),
+            "com.example.service.MyHandler"
+        );
+    }
+
+    #[test]
+    fn truncate_logger_left_empty_string() {
+        assert_eq!(truncate_logger_left("", 10), "");
+    }
+
     // --- Render with LoggerFormat tests ---
 
     #[test]
@@ -1042,6 +1136,42 @@ mod tests {
         args.logger_format = LoggerFormat::ShortDots;
         let output = test_render(&record, &tokens, &color, &args);
         assert_eq!(output, "[SimpleLogger] msg");
+    }
+
+    #[test]
+    fn render_logger_length_truncation() {
+        let record = make_record(
+            Some(Level::Info),
+            None,
+            Some("com.example.service.MyHandler"),
+            Some("hello"),
+        );
+        let tokens = parse_template("[{logger}] {message}");
+        let color = ColorConfig::with_enabled(false);
+        let mut args = default_args();
+        args.logger_format = LoggerFormat::AsIs;
+        args.logger_length = 15;
+        let output = test_render(&record, &tokens, &color, &args);
+        // "com.example.service.MyHandler" -> strip "com." -> "example.service.MyHandler" -> strip "example." -> "service.MyHandler" (17, still too long) -> strip "service." -> "MyHandler" (9, fits)
+        assert_eq!(output, "[MyHandler] hello");
+    }
+
+    #[test]
+    fn render_logger_length_with_short_dots() {
+        let record = make_record(
+            Some(Level::Info),
+            None,
+            Some("com.example.service.MyHandler"),
+            Some("hello"),
+        );
+        let tokens = parse_template("[{logger}] {message}");
+        let color = ColorConfig::with_enabled(false);
+        let mut args = default_args();
+        args.logger_format = LoggerFormat::ShortDots;
+        args.logger_length = 13;
+        let output = test_render(&record, &tokens, &color, &args);
+        // ShortDots: "c.e.s.MyHandler" (15 chars) -> truncate to 13 -> strip "c." -> "e.s.MyHandler" (13, fits)
+        assert_eq!(output, "[e.s.MyHandler] hello");
     }
 
     #[test]
