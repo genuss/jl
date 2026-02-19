@@ -171,5 +171,5 @@ Build a Rust CLI tool that reads JSON log lines from stdin or files and renders 
 
 ### Task 12: Update documentation
 
-- [ ] Update README.md with usage, examples, and supported schemas
-- [ ] Move this plan to `docs/plans/completed/`
+- [x] Update README.md with usage, examples, and supported schemas
+- [x] Move this plan to `docs/plans/completed/`
