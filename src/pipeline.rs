@@ -120,15 +120,9 @@ fn process_source(
 
                 let rendered = format::render(&record, tokens, color, args, render_ctx);
                 output.write_line(&rendered)?;
-                if args.follow {
-                    output.flush()?;
-                }
             }
             ParseResult::NonJson(text) => {
                 output.write_line(&format::sanitize_control_chars(&text))?;
-                if args.follow {
-                    output.flush()?;
-                }
             }
             ParseResult::Skip => {}
         }

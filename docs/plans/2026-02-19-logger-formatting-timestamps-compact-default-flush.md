@@ -119,11 +119,11 @@ Seven enhancements to the `jl` JSON log pretty-printer:
   - Modify: `src/output.rs`
   - Modify: `src/pipeline.rs`
 
-  - [ ] In `StdoutSink::write_line()`, call `self.writer.flush()` after each `writeln!()` call (line-buffered behavior). This ensures output appears immediately when piped from commands like `kubectl`
-  - [ ] Remove the conditional `if args.follow { output.flush()? }` from `pipeline.rs::process_source()` since flushing now happens per line unconditionally in StdoutSink
-  - [ ] Keep the explicit `output.flush()` at the end of `pipeline::run()` as a safety net
-  - [ ] Verify existing tests still pass (flushing more often should not change correctness)
-  - [ ] Run `cargo test` - must pass before task 8
+  - [x] In `StdoutSink::write_line()`, call `self.writer.flush()` after each `writeln!()` call (line-buffered behavior). This ensures output appears immediately when piped from commands like `kubectl`
+  - [x] Remove the conditional `if args.follow { output.flush()? }` from `pipeline.rs::process_source()` since flushing now happens per line unconditionally in StdoutSink
+  - [x] Keep the explicit `output.flush()` at the end of `pipeline::run()` as a safety net
+  - [x] Verify existing tests still pass (flushing more often should not change correctness)
+  - [x] Run `cargo test` - must pass before task 8
 
 ### Task 8: Verify acceptance criteria
 

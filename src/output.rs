@@ -37,6 +37,7 @@ impl StdoutSink {
 impl OutputSink for StdoutSink {
     fn write_line(&mut self, line: &str) -> Result<(), JlError> {
         writeln!(self.writer, "{line}")?;
+        self.writer.flush()?;
         Ok(())
     }
 
