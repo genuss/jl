@@ -25,6 +25,7 @@ impl ColorConfig {
 
     /// Create a `ColorConfig` with color explicitly enabled or disabled.
     /// Useful for testing.
+    #[cfg(test)]
     pub fn with_enabled(enabled: bool) -> Self {
         ColorConfig { enabled }
     }

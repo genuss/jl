@@ -12,6 +12,12 @@ pub struct StdinSource {
     reader: BufReader<Stdin>,
 }
 
+impl Default for StdinSource {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StdinSource {
     pub fn new() -> Self {
         Self {

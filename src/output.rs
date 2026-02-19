@@ -12,6 +12,12 @@ pub struct StdoutSink {
     writer: BufWriter<Stdout>,
 }
 
+impl Default for StdoutSink {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StdoutSink {
     pub fn new() -> Self {
         Self {

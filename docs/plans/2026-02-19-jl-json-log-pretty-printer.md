@@ -124,13 +124,13 @@ Build a Rust CLI tool that reads JSON log lines from stdin or files and renders 
 - Create: `src/lib.rs`
 - Modify: `src/main.rs`
 
-- [ ] Create `src/pipeline.rs` with `run(args: Args) -> Result<(), JlError>`: construct input source(s) and output sink from args, parse template once, detect schema on first JSON line and cache, loop reading lines through parse -> extract -> level filter -> render -> write
-- [ ] Handle multiple input files by processing them sequentially
-- [ ] Handle `--min-level` filtering: skip records where `record.level < min_level`
-- [ ] Create `src/lib.rs` re-exporting all modules for integration test access
-- [ ] Update `src/main.rs` to call `pipeline::run()` with parsed args, print errors to stderr, exit with code 1 on error
-- [ ] Write unit tests for pipeline logic: level filtering, schema caching, non-JSON pass-through
-- [ ] `cargo test` - must pass
+- [x] Create `src/pipeline.rs` with `run(args: Args) -> Result<(), JlError>`: construct input source(s) and output sink from args, parse template once, detect schema on first JSON line and cache, loop reading lines through parse -> extract -> level filter -> render -> write
+- [x] Handle multiple input files by processing them sequentially
+- [x] Handle `--min-level` filtering: skip records where `record.level < min_level`
+- [x] Create `src/lib.rs` re-exporting all modules for integration test access
+- [x] Update `src/main.rs` to call `pipeline::run()` with parsed args, print errors to stderr, exit with code 1 on error
+- [x] Write unit tests for pipeline logic: level filtering, schema caching, non-JSON pass-through
+- [x] `cargo test` - must pass
 
 ### Task 9: Follow mode and stack trace formatting
 
