@@ -383,6 +383,7 @@ mod tests {
             ],
             |args| {
                 args.compact = true;
+                args.add_fields = Some("extra_field".to_string());
             },
         );
         // Each output record should be a single line (compact mode)

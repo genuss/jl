@@ -244,8 +244,9 @@ fn append_stack_trace(line: &mut String, stack_trace: &str, color: &ColorConfig)
 ///
 /// If `add_fields` is non-empty, only those extras are included (allowlist).
 /// If `omit_fields` is non-empty, those extras are excluded (denylist).
+/// The two flags are mutually exclusive (enforced by CLI validation).
 /// Fields already shown via template custom field placeholders are excluded.
-/// If both add/omit are empty, all non-template extras are included.
+/// If neither flag is set, no extras are included (opt-in model).
 fn collect_extras<'a>(
     record: &'a LogRecord,
     add_fields: &HashSet<String>,
@@ -261,11 +262,11 @@ fn collect_extras<'a>(
                 return false;
             }
             if !add_fields.is_empty() {
-                add_fields.contains(k.as_str()) && !omit_fields.contains(k.as_str())
+                add_fields.contains(k.as_str())
             } else if !omit_fields.is_empty() {
                 !omit_fields.contains(k.as_str())
             } else {
-                true
+                false
             }
         })
         .collect()
@@ -496,11 +497,24 @@ mod tests {
         record.extras.insert("pid".to_string(), json!(1234));
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
-        let args = default_args();
+        let mut args = default_args();
+        args.add_fields = Some("host,pid".to_string());
         let output = test_render(&record, &tokens, &color, &args);
         assert!(output.contains("INFO: test"));
         assert!(output.contains("\n  host: server1"));
         assert!(output.contains("\n  pid: 1234"));
+    }
+
+    #[test]
+    fn render_no_extras_by_default() {
+        let mut record = make_record(Some(Level::Info), None, None, Some("test"));
+        record.extras.insert("host".to_string(), json!("server1"));
+        record.extras.insert("pid".to_string(), json!(1234));
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(false);
+        let args = default_args();
+        let output = test_render(&record, &tokens, &color, &args);
+        assert_eq!(output, "INFO: test");
     }
 
     #[test]
@@ -512,6 +526,7 @@ mod tests {
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
         args.compact = true;
+        args.add_fields = Some("host,pid".to_string());
         let output = test_render(&record, &tokens, &color, &args);
         assert!(output.contains("INFO: test"));
         // Compact: extras on same line, not on separate lines
@@ -804,6 +819,7 @@ mod tests {
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
         args.compact = true;
+        args.add_fields = Some("host".to_string());
         let output = test_render(&record, &tokens, &color, &args);
 
         // Extras should be on the same line (compact), stack trace on new lines
@@ -898,6 +914,7 @@ mod tests {
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
         args.compact = true;
+        args.add_fields = Some("bad".to_string());
         let output = test_render(&record, &tokens, &color, &args);
         assert!(!output.contains('\x1b'));
     }

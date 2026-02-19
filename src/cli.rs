@@ -20,12 +20,12 @@ pub struct Args {
     pub format: String,
 
     /// Comma-separated list of extra fields to include in output.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "omit_fields")]
     pub add_fields: Option<String>,
 
     /// Comma-separated list of extra fields to omit from output
     /// (does not affect fields referenced in the format template).
-    #[arg(long)]
+    #[arg(long, conflicts_with = "add_fields")]
     pub omit_fields: Option<String>,
 
     /// Colorize output.
@@ -146,16 +146,29 @@ mod tests {
     }
 
     #[test]
-    fn add_and_omit_fields() {
-        let args = parse_args(&[
+    fn add_fields_only() {
+        let args = parse_args(&["jl", "--add-fields", "host,pid"]);
+        assert_eq!(args.add_fields.as_deref(), Some("host,pid"));
+        assert!(args.omit_fields.is_none());
+    }
+
+    #[test]
+    fn omit_fields_only() {
+        let args = parse_args(&["jl", "--omit-fields", "stack_trace"]);
+        assert!(args.add_fields.is_none());
+        assert_eq!(args.omit_fields.as_deref(), Some("stack_trace"));
+    }
+
+    #[test]
+    fn add_and_omit_fields_conflict() {
+        let result = Args::try_parse_from([
             "jl",
             "--add-fields",
-            "host,pid",
+            "host",
             "--omit-fields",
             "stack_trace",
         ]);
-        assert_eq!(args.add_fields.as_deref(), Some("host,pid"));
-        assert_eq!(args.omit_fields.as_deref(), Some("stack_trace"));
+        assert!(result.is_err());
     }
 
     #[test]
