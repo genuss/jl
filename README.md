@@ -11,7 +11,12 @@ A Rust CLI tool that reads JSON log lines from stdin or files and renders them a
 - Timezone conversion (local, UTC, or any IANA timezone)
 - Follow mode (`--follow`) for tailing files
 - Non-JSON line handling (print as-is, skip, or fail)
-- Compact and raw JSON output modes
+- Compact extra fields display by default (opt into expanded multi-line with `--expanded`)
+- Logger name abbreviation (`--logger-format short-dots`) and length limiting (`--logger-length`)
+- Timestamp format options (`--ts-format time` for time-only, `full` for datetime)
+- Colored separators in extra fields output
+- Line-buffered output for immediate display when piped
+- Raw JSON output mode
 - File input or stdin piping
 
 ## Installation
@@ -46,11 +51,14 @@ jl app.log error.log
 | `--color <MODE>` | Color mode: `auto`, `always`, `never` | `auto` |
 | `--non-json <MODE>` | Non-JSON handling: `print-as-is`, `skip`, `fail` | `print-as-is` |
 | `--schema <SCHEMA>` | Force schema: `auto`, `logstash`, `logrus`, `bunyan`, `generic` | `auto` |
+| `--logger-format <FORMAT>` | Logger name format: `short-dots` (abbreviate segments), `as-is` | `short-dots` |
+| `--logger-length <N>` | Maximum display length for logger names (crops from left) | `30` |
+| `--ts-format <FORMAT>` | Timestamp format: `time` (HH:MM:SS.mmm), `full` (datetime) | `time` |
 | `--min-level <LEVEL>` | Minimum log level to display | (none) |
 | `--tz <TIMEZONE>` | Timezone: `local`, `utc`, or IANA name | `local` |
 | `--add-fields <FIELDS>` | Comma-separated extra fields to include | (none) |
 | `--omit-fields <FIELDS>` | Comma-separated fields to omit | (none) |
-| `--compact` | Show extra fields on the same line | off |
+| `--expanded` | Show extra fields on separate lines (default is compact/same-line) | off |
 | `--raw-json` | Output records as raw JSON | off |
 | `--follow` | Follow input file, waiting for new data | off |
 | `-o, --output <FILE>` | Write output to a file instead of stdout | (stdout) |
@@ -136,10 +144,22 @@ Follow a log file:
 jl --follow /var/log/app.log
 ```
 
-Compact mode with specific fields:
+Extra fields (compact by default):
 
 ```sh
-cat app.log | jl --compact --add-fields host,pid
+cat app.log | jl --add-fields host,pid
+```
+
+Expanded mode with specific fields:
+
+```sh
+cat app.log | jl --expanded --add-fields host,pid
+```
+
+Full logger names and datetime timestamps:
+
+```sh
+cat app.log | jl --logger-format as-is --ts-format full
 ```
 
 ## License

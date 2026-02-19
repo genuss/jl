@@ -140,6 +140,6 @@ Seven enhancements to the `jl` JSON log pretty-printer:
 
 ### Task 9: Update documentation
 
-  - [ ] Update README.md with new CLI arguments and their defaults
-  - [ ] Update CLAUDE.md if internal patterns changed
-  - [ ] Move this plan to `docs/plans/completed/`
+  - [x] Update README.md with new CLI arguments and their defaults
+  - [x] Update CLAUDE.md if internal patterns changed
+  - [x] Move this plan to `docs/plans/completed/`
