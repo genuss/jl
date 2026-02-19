@@ -120,7 +120,7 @@ impl RenderContext {
 /// - Color styling for the level field
 /// - `--raw-json` mode (outputs the original JSON)
 /// - `--add-fields` / `--omit-fields` for controlling extra field output
-/// - `--compact` mode (extras on same line vs separate lines)
+/// - `--expanded` mode (extras on separate lines vs same line)
 /// - Stack trace appending after the main line
 pub fn render(
     record: &LogRecord,
@@ -185,8 +185,18 @@ pub fn render(
 
     // Append extras
     if !extras.is_empty() {
-        if args.compact {
-            // Compact mode: extras on the same line
+        if args.expanded {
+            // Expanded mode: extras on separate lines, indented
+            for (k, v) in &extras {
+                line.push('\n');
+                line.push_str(&format!(
+                    "  {}: {}",
+                    sanitize_control_chars(k),
+                    sanitize_control_chars(&format_extra_value(v))
+                ));
+            }
+        } else {
+            // Compact mode (default): extras on the same line
             let extras_str: Vec<String> = extras
                 .iter()
                 .map(|(k, v)| {
@@ -199,16 +209,6 @@ pub fn render(
                 .collect();
             line.push(' ');
             line.push_str(&extras_str.join(" "));
-        } else {
-            // Normal mode: extras on separate lines, indented
-            for (k, v) in &extras {
-                line.push('\n');
-                line.push_str(&format!(
-                    "  {}: {}",
-                    sanitize_control_chars(k),
-                    sanitize_control_chars(&format_extra_value(v))
-                ));
-            }
         }
     }
 
@@ -415,7 +415,7 @@ mod tests {
             ts_format: TsFormat::Full,
             min_level: None,
             raw_json: false,
-            compact: false,
+            expanded: false,
             tz: "utc".to_string(),
             follow: false,
             output: None,
@@ -567,13 +567,14 @@ mod tests {
     }
 
     #[test]
-    fn render_with_extras_normal_mode() {
+    fn render_with_extras_expanded_mode() {
         let mut record = make_record(Some(Level::Info), None, None, Some("test"));
         record.extras.insert("host".to_string(), json!("server1"));
         record.extras.insert("pid".to_string(), json!(1234));
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
+        args.expanded = true;
         args.add_fields = Some("host,pid".to_string());
         let output = test_render(&record, &tokens, &color, &args);
         assert!(output.contains("INFO: test"));
@@ -594,18 +595,17 @@ mod tests {
     }
 
     #[test]
-    fn render_with_extras_compact_mode() {
+    fn render_with_extras_compact_mode_default() {
         let mut record = make_record(Some(Level::Info), None, None, Some("test"));
         record.extras.insert("host".to_string(), json!("server1"));
         record.extras.insert("pid".to_string(), json!(1234));
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
-        args.compact = true;
         args.add_fields = Some("host,pid".to_string());
         let output = test_render(&record, &tokens, &color, &args);
         assert!(output.contains("INFO: test"));
-        // Compact: extras on same line, not on separate lines
+        // Compact is now the default: extras on same line, not on separate lines
         assert!(!output.contains('\n'));
         assert!(output.contains("host=server1"));
         assert!(output.contains("pid=1234"));
@@ -621,7 +621,6 @@ mod tests {
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
         args.omit_fields = Some("secret,pid".to_string());
-        args.compact = true;
         let output = test_render(&record, &tokens, &color, &args);
         assert!(output.contains("host=server1"));
         assert!(!output.contains("secret"));
@@ -638,7 +637,6 @@ mod tests {
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
         args.add_fields = Some("host".to_string());
-        args.compact = true;
         let output = test_render(&record, &tokens, &color, &args);
         // Only host should be included
         assert!(output.contains("host=server1"));
@@ -887,18 +885,17 @@ mod tests {
     }
 
     #[test]
-    fn stack_trace_with_extras_and_compact() {
+    fn stack_trace_with_extras_and_compact_default() {
         let mut record = make_record(Some(Level::Error), None, None, Some("fail"));
         record.stack_trace = Some("Error\n\tat line 1".to_string());
         record.extras.insert("host".to_string(), json!("server1"));
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
-        args.compact = true;
         args.add_fields = Some("host".to_string());
         let output = test_render(&record, &tokens, &color, &args);
 
-        // Extras should be on the same line (compact), stack trace on new lines
+        // Extras should be on the same line (compact is default), stack trace on new lines
         let lines: Vec<&str> = output.lines().collect();
         assert!(lines[0].contains("ERROR: fail"));
         assert!(lines[0].contains("host=server1"));
@@ -989,7 +986,6 @@ mod tests {
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
-        args.compact = true;
         args.add_fields = Some("bad".to_string());
         let output = test_render(&record, &tokens, &color, &args);
         assert!(!output.contains('\x1b'));

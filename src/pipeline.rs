@@ -159,7 +159,7 @@ mod tests {
             ts_format: TsFormat::Full,
             min_level: None,
             raw_json: false,
-            compact: false,
+            expanded: false,
             tz: "utc".to_string(),
             follow: false,
             output: None,
@@ -379,17 +379,16 @@ mod tests {
     // --- Compact mode test ---
 
     #[test]
-    fn compact_mode_extras_on_same_line() {
+    fn compact_mode_is_default() {
         let output = run_with_input(
             &[
                 r#"{"@timestamp":"2024-01-15T10:30:00Z","level":"INFO","logger_name":"app","message":"test","extra_field":"value"}"#,
             ],
             |args| {
-                args.compact = true;
                 args.add_fields = Some("extra_field".to_string());
             },
         );
-        // Each output record should be a single line (compact mode)
+        // Compact mode is now the default: each output record should be a single line
         let lines: Vec<&str> = output.lines().collect();
         assert_eq!(lines.len(), 1);
         assert!(lines[0].contains("extra_field=value"));

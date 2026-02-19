@@ -60,9 +60,9 @@ pub struct Args {
     #[arg(long)]
     pub raw_json: bool,
 
-    /// Show extra fields on the same line instead of separate lines.
+    /// Show extra fields on separate lines instead of the default compact (same-line) mode.
     #[arg(long)]
-    pub compact: bool,
+    pub expanded: bool,
 
     /// Timezone for displaying timestamps (local, utc, or IANA name).
     #[arg(long, default_value = "local")]
@@ -159,7 +159,7 @@ mod tests {
         assert_eq!(args.ts_format, TsFormat::Time);
         assert!(args.min_level.is_none());
         assert!(!args.raw_json);
-        assert!(!args.compact);
+        assert!(!args.expanded);
         assert_eq!(args.tz, "local");
         assert!(!args.follow);
         assert!(args.output.is_none());
@@ -260,9 +260,9 @@ mod tests {
 
     #[test]
     fn boolean_flags() {
-        let args = parse_args(&["jl", "--raw-json", "--compact", "--follow"]);
+        let args = parse_args(&["jl", "--raw-json", "--expanded", "--follow"]);
         assert!(args.raw_json);
-        assert!(args.compact);
+        assert!(args.expanded);
         assert!(args.follow);
     }
 
@@ -307,7 +307,7 @@ mod tests {
             "bunyan",
             "--tz",
             "utc",
-            "--compact",
+            "--expanded",
             "-o",
             "/tmp/out.txt",
             "input.log",
@@ -317,7 +317,7 @@ mod tests {
         assert_eq!(args.min_level, Some(Level::Debug));
         assert_eq!(args.schema, SchemaChoice::Bunyan);
         assert_eq!(args.tz, "utc");
-        assert!(args.compact);
+        assert!(args.expanded);
         assert_eq!(args.output, Some(PathBuf::from("/tmp/out.txt")));
         assert_eq!(args.files, vec![PathBuf::from("input.log")]);
     }

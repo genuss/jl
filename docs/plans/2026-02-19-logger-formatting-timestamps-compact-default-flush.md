@@ -93,11 +93,11 @@ Seven enhancements to the `jl` JSON log pretty-printer:
   - Modify: `src/pipeline.rs`
   - Modify: `tests/cli_tests.rs`
 
-  - [ ] Change the `compact` field in `Args` to default true: `#[arg(long, default_value_t = true)]`
-  - [ ] Add `--no-compact` or rename to allow disabling: replace the boolean `compact` with a `CompactMode` enum or use `--expanded` flag for the non-compact mode. Simplest: rename to `--expanded` as the opt-in for multi-line extras, and make compact the implicit default
-  - [ ] Update `format.rs::render()` to check the new flag accordingly (if using `--expanded`, check `args.expanded` instead of `!args.compact`)
-  - [ ] Update all tests that set or check `compact` behavior
-  - [ ] Run `cargo test` - must pass before task 6
+  - [x] Change the `compact` field in `Args` to default true: `#[arg(long, default_value_t = true)]`
+  - [x] Add `--no-compact` or rename to allow disabling: replace the boolean `compact` with a `CompactMode` enum or use `--expanded` flag for the non-compact mode. Simplest: rename to `--expanded` as the opt-in for multi-line extras, and make compact the implicit default
+  - [x] Update `format.rs::render()` to check the new flag accordingly (if using `--expanded`, check `args.expanded` instead of `!args.compact`)
+  - [x] Update all tests that set or check `compact` behavior
+  - [x] Run `cargo test` - must pass before task 6
 
 ### Task 6: Add color to `=` sign in k=v extra fields
 
