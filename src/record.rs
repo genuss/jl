@@ -402,7 +402,8 @@ mod tests {
         let record = LogRecord::extract(value, &mapping, "America/New_York", TsFormat::Full).unwrap();
         let ts = record.timestamp.unwrap();
         assert!(ts.contains("05:30:00"));
-        assert!(ts.contains("-05:00"));
+        // Timezone offset is no longer included in formatted output
+        assert!(!ts.contains("-05:00"));
     }
 
     #[test]

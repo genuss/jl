@@ -79,10 +79,10 @@ Seven enhancements to the `jl` JSON log pretty-printer:
 
   - Modify: `src/timestamp.rs`
 
-  - [ ] Change all format strings in `format_timestamp()` to omit the `%:z` suffix - use `%Y-%m-%dT%H:%M:%S%.3f` for `full` mode (instead of `%Y-%m-%dT%H:%M:%S%.3f%:z`), and remove the `Z` suffix for UTC mode too
-  - [ ] Update all existing timestamp tests to expect the new format without timezone offset
-  - [ ] Update integration tests in `tests/cli_tests.rs` that assert on timestamp format
-  - [ ] Run `cargo test` - must pass before task 5
+  - [x] Change all format strings in `format_timestamp()` to omit the `%:z` suffix - use `%Y-%m-%dT%H:%M:%S%.3f` for `full` mode (instead of `%Y-%m-%dT%H:%M:%S%.3f%:z`), and remove the `Z` suffix for UTC mode too
+  - [x] Update all existing timestamp tests to expect the new format without timezone offset
+  - [x] Update integration tests in `tests/cli_tests.rs` that assert on timestamp format
+  - [x] Run `cargo test` - must pass before task 5
 
 ### Task 5: Make compact mode the default
 

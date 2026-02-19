@@ -529,7 +529,7 @@ mod tests {
     fn render_basic_no_color() {
         let record = make_record(
             Some(Level::Info),
-            Some("2024-01-15T10:30:00.000Z"),
+            Some("2024-01-15T10:30:00.000"),
             Some("com.example"),
             Some("hello world"),
         );
@@ -539,7 +539,7 @@ mod tests {
         let output = test_render(&record, &tokens, &color, &args);
         assert_eq!(
             output,
-            "2024-01-15T10:30:00.000Z INFO [com.example] hello world"
+            "2024-01-15T10:30:00.000 INFO [com.example] hello world"
         );
     }
 
@@ -724,7 +724,7 @@ mod tests {
     fn render_no_extras_no_stack_trace() {
         let record = make_record(
             Some(Level::Debug),
-            Some("2024-01-15T10:30:00.000Z"),
+            Some("2024-01-15T10:30:00.000"),
             Some("app"),
             Some("started"),
         );
@@ -732,7 +732,7 @@ mod tests {
         let color = ColorConfig::with_enabled(false);
         let args = default_args();
         let output = test_render(&record, &tokens, &color, &args);
-        assert_eq!(output, "2024-01-15T10:30:00.000Z DEBUG [app] started");
+        assert_eq!(output, "2024-01-15T10:30:00.000 DEBUG [app] started");
         assert!(!output.contains('\n'));
     }
 

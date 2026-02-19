@@ -81,7 +81,7 @@ fn parse_epoch(value: f64) -> Option<DateTime<FixedOffset>> {
 ///
 /// `ts_format` controls the output format:
 /// - `TsFormat::Time` - time only: `HH:MM:SS.mmm`
-/// - `TsFormat::Full` - full date and time: `YYYY-MM-DDTHH:MM:SS.mmm` with timezone
+/// - `TsFormat::Full` - full date and time: `YYYY-MM-DDTHH:MM:SS.mmm` (no timezone offset)
 pub fn format_timestamp(
     ts: &DateTime<FixedOffset>,
     tz: &str,
@@ -89,7 +89,7 @@ pub fn format_timestamp(
 ) -> Result<String, JlError> {
     let (full_fmt, full_fmt_utc) = match ts_format {
         TsFormat::Time => ("%H:%M:%S%.3f", "%H:%M:%S%.3f"),
-        TsFormat::Full => ("%Y-%m-%dT%H:%M:%S%.3f%:z", "%Y-%m-%dT%H:%M:%S%.3fZ"),
+        TsFormat::Full => ("%Y-%m-%dT%H:%M:%S%.3f", "%Y-%m-%dT%H:%M:%S%.3f"),
     };
     let formatted = match tz.to_ascii_lowercase().as_str() {
         "local" => {
@@ -232,14 +232,14 @@ mod tests {
     fn format_utc() {
         let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
         let formatted = format_timestamp(&ts, "utc", TsFormat::Full).unwrap();
-        assert_eq!(formatted, "2024-01-15T10:30:00.000Z");
+        assert_eq!(formatted, "2024-01-15T10:30:00.000");
     }
 
     #[test]
     fn format_utc_uppercase() {
         let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
         let formatted = format_timestamp(&ts, "UTC", TsFormat::Full).unwrap();
-        assert_eq!(formatted, "2024-01-15T10:30:00.000Z");
+        assert_eq!(formatted, "2024-01-15T10:30:00.000");
     }
 
     #[test]
@@ -247,7 +247,7 @@ mod tests {
         let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
         let formatted = format_timestamp(&ts, "America/New_York", TsFormat::Full).unwrap();
         // EST is UTC-5
-        assert_eq!(formatted, "2024-01-15T05:30:00.000-05:00");
+        assert_eq!(formatted, "2024-01-15T05:30:00.000");
     }
 
     #[test]
@@ -255,7 +255,7 @@ mod tests {
         let ts = DateTime::parse_from_rfc3339("2024-01-15T10:30:00+00:00").unwrap();
         let formatted = format_timestamp(&ts, "Asia/Tokyo", TsFormat::Full).unwrap();
         // JST is UTC+9
-        assert_eq!(formatted, "2024-01-15T19:30:00.000+09:00");
+        assert_eq!(formatted, "2024-01-15T19:30:00.000");
     }
 
     #[test]
@@ -289,7 +289,7 @@ mod tests {
         // Timestamp with +05:30 offset, display in UTC
         let ts = DateTime::parse_from_rfc3339("2024-01-15T16:00:00+05:30").unwrap();
         let formatted = format_timestamp(&ts, "utc", TsFormat::Full).unwrap();
-        assert_eq!(formatted, "2024-01-15T10:30:00.000Z");
+        assert_eq!(formatted, "2024-01-15T10:30:00.000");
     }
 
     // --- TsFormat::Time tests ---
