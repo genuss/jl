@@ -48,6 +48,7 @@ pub fn run(args: Args) -> Result<(), JlError> {
         }
     }
 
+    output.flush()?;
     Ok(())
 }
 
@@ -91,7 +92,7 @@ fn process_source(
                 output.write_line(&rendered)?;
             }
             ParseResult::NonJson(text) => {
-                output.write_line(&text)?;
+                output.write_line(&format::sanitize_control_chars(&text))?;
             }
             ParseResult::Skip => {}
         }

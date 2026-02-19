@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader, Seek, SeekFrom, Stdin};
 use std::path::{Path, PathBuf};
 use std::thread;
@@ -83,18 +83,35 @@ impl LineSource for FileSource {
 /// When EOF is reached, `FollowSource` sleeps briefly and re-reads the file
 /// for new data. It never returns `None` (EOF) under normal operation; it
 /// blocks until new lines appear or the caller otherwise terminates.
+///
+/// On unix systems, file rotation is detected by comparing inode numbers,
+/// so a replaced file is always read from the beginning even if it is already
+/// larger than the previous read position.
 pub struct FollowSource {
     reader: BufReader<File>,
     path: PathBuf,
+    #[cfg(unix)]
+    inode: u64,
+    /// Count of consecutive metadata failures after successful file opens.
+    /// Used to detect persistent errors and avoid silent infinite stalls.
+    metadata_failures: u32,
 }
 
 impl FollowSource {
     /// Create a new `FollowSource` for the given file path.
     pub fn new(path: &Path) -> Result<Self, JlError> {
         let file = File::open(path)?;
+        #[cfg(unix)]
+        let inode = {
+            use std::os::unix::fs::MetadataExt;
+            file.metadata()?.ino()
+        };
         Ok(Self {
             reader: BufReader::new(file),
             path: path.to_path_buf(),
+            #[cfg(unix)]
+            inode,
+            metadata_failures: 0,
         })
     }
 
@@ -103,12 +120,35 @@ impl FollowSource {
     #[cfg(test)]
     pub fn new_from_end(path: &Path) -> Result<Self, JlError> {
         let file = File::open(path)?;
+        #[cfg(unix)]
+        let inode = {
+            use std::os::unix::fs::MetadataExt;
+            file.metadata()?.ino()
+        };
         let mut reader = BufReader::new(file);
         reader.seek(SeekFrom::End(0))?;
         Ok(Self {
             reader,
             path: path.to_path_buf(),
+            #[cfg(unix)]
+            inode,
+            metadata_failures: 0,
         })
+    }
+
+    /// Check whether the file at our path has been replaced (different inode)
+    /// or truncated (shorter than our current position). Returns `true` if the
+    /// file was rotated/replaced and we should start reading from the beginning.
+    fn is_file_rotated(&self, new_meta: &fs::Metadata, current_pos: u64) -> bool {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            if new_meta.ino() != self.inode {
+                return true;
+            }
+        }
+        // Fallback for non-unix or same-inode: detect truncation by size
+        new_meta.len() < current_pos
     }
 }
 
@@ -124,15 +164,44 @@ impl LineSource for FollowSource {
                 // or just continue reading from the current position
                 if let Ok(file) = File::open(&self.path) {
                     let current_pos = self.reader.stream_position()?;
-                    let new_len = file.metadata().map(|m| m.len()).unwrap_or(0);
-                    let mut new_reader = BufReader::new(file);
-                    if new_len < current_pos {
-                        // File was truncated or rotated; start from beginning
-                        new_reader.seek(SeekFrom::Start(0))?;
+                    if let Ok(new_meta) = file.metadata() {
+                        self.metadata_failures = 0;
+                        let mut new_reader = BufReader::new(file);
+                        if self.is_file_rotated(&new_meta, current_pos) {
+                            // File was truncated or replaced; start from beginning
+                            new_reader.seek(SeekFrom::Start(0))?;
+                            #[cfg(unix)]
+                            {
+                                use std::os::unix::fs::MetadataExt;
+                                self.inode = new_meta.ino();
+                            }
+                        } else {
+                            new_reader.seek(SeekFrom::Start(current_pos))?;
+                        }
+                        self.reader = new_reader;
                     } else {
-                        new_reader.seek(SeekFrom::Start(current_pos))?;
+                        self.metadata_failures += 1;
+                        if self.metadata_failures >= 10 {
+                            // Persistent metadata failure; switch to the new file
+                            // handle. Without metadata we cannot check inodes, but
+                            // we can detect truncation by probing file length.
+                            let path_display = crate::format::sanitize_control_chars(
+                                &self.path.display().to_string(),
+                            );
+                            eprintln!("jl: warning: repeated metadata failures for {path_display}");
+                            let mut new_reader = BufReader::new(file);
+                            let file_len = new_reader.seek(SeekFrom::End(0))?;
+                            if file_len < current_pos {
+                                // File is shorter than our position – likely
+                                // truncated or replaced; start from the beginning.
+                                new_reader.seek(SeekFrom::Start(0))?;
+                            } else {
+                                new_reader.seek(SeekFrom::Start(current_pos))?;
+                            }
+                            self.reader = new_reader;
+                            self.metadata_failures = 0;
+                        }
                     }
-                    self.reader = new_reader;
                 }
                 continue;
             }

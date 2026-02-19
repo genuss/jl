@@ -23,7 +23,8 @@ pub struct Args {
     #[arg(long)]
     pub add_fields: Option<String>,
 
-    /// Comma-separated list of fields to omit from output.
+    /// Comma-separated list of extra fields to omit from output
+    /// (does not affect fields referenced in the format template).
     #[arg(long)]
     pub omit_fields: Option<String>,
 
@@ -82,7 +83,7 @@ pub enum ColorMode {
 /// How to handle lines that are not valid JSON.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum NonJsonMode {
-    /// Print non-JSON lines to output unchanged.
+    /// Print non-JSON lines to output (control characters are sanitized).
     PrintAsIs,
     /// Silently skip non-JSON lines.
     Skip,

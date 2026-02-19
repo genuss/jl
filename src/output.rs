@@ -6,6 +6,14 @@ use crate::error::JlError;
 
 pub trait OutputSink {
     fn write_line(&mut self, line: &str) -> Result<(), JlError>;
+
+    /// Flush any buffered data to the underlying destination.
+    ///
+    /// Callers should invoke this at the end of processing to ensure all
+    /// output has been written. The default implementation is a no-op.
+    fn flush(&mut self) -> Result<(), JlError> {
+        Ok(())
+    }
 }
 
 pub struct StdoutSink {
@@ -32,6 +40,11 @@ impl OutputSink for StdoutSink {
         self.writer.flush()?;
         Ok(())
     }
+
+    fn flush(&mut self) -> Result<(), JlError> {
+        self.writer.flush()?;
+        Ok(())
+    }
 }
 
 pub struct FileSink {
@@ -50,6 +63,11 @@ impl FileSink {
 impl OutputSink for FileSink {
     fn write_line(&mut self, line: &str) -> Result<(), JlError> {
         writeln!(self.writer, "{line}")?;
+        Ok(())
+    }
+
+    fn flush(&mut self) -> Result<(), JlError> {
+        self.writer.flush()?;
         Ok(())
     }
 }

@@ -128,9 +128,15 @@ pub fn render(
                         Some(level) => color.style_level(level),
                         None => String::new(),
                     },
-                    CanonicalField::Timestamp => record.timestamp.clone().unwrap_or_default(),
-                    CanonicalField::Logger => record.logger.clone().unwrap_or_default(),
-                    CanonicalField::Message => record.message.clone().unwrap_or_default(),
+                    CanonicalField::Timestamp => {
+                        sanitize_control_chars(&record.timestamp.clone().unwrap_or_default())
+                    }
+                    CanonicalField::Logger => {
+                        sanitize_control_chars(&record.logger.clone().unwrap_or_default())
+                    }
+                    CanonicalField::Message => {
+                        sanitize_control_chars(&record.message.clone().unwrap_or_default())
+                    }
                 };
                 line.push_str(&value);
             }
@@ -138,7 +144,7 @@ pub fn render(
                 let value = record
                     .extras
                     .get(name)
-                    .map(format_extra_value)
+                    .map(|v| sanitize_control_chars(&format_extra_value(v)))
                     .unwrap_or_default();
                 line.push_str(&value);
             }
@@ -154,7 +160,13 @@ pub fn render(
             // Compact mode: extras on the same line
             let extras_str: Vec<String> = extras
                 .iter()
-                .map(|(k, v)| format!("{k}={}", format_extra_value(v)))
+                .map(|(k, v)| {
+                    format!(
+                        "{}={}",
+                        sanitize_control_chars(k),
+                        sanitize_control_chars(&format_extra_value(v))
+                    )
+                })
                 .collect();
             line.push(' ');
             line.push_str(&extras_str.join(" "));
@@ -162,7 +174,11 @@ pub fn render(
             // Normal mode: extras on separate lines, indented
             for (k, v) in &extras {
                 line.push('\n');
-                line.push_str(&format!("  {k}: {}", format_extra_value(v)));
+                line.push_str(&format!(
+                    "  {}: {}",
+                    sanitize_control_chars(k),
+                    sanitize_control_chars(&format_extra_value(v))
+                ));
             }
         }
     }
@@ -189,7 +205,8 @@ fn append_stack_trace(line: &mut String, stack_trace: &str, color: &ColorConfig)
         Style::new()
     };
 
-    for trace_line in stack_trace.lines() {
+    let sanitized = sanitize_control_chars(stack_trace);
+    for trace_line in sanitized.lines() {
         line.push('\n');
         let indented = format!("    {trace_line}");
         if color.enabled {
@@ -250,6 +267,24 @@ fn format_extra_value(val: &Value) -> String {
         Value::String(s) => s.clone(),
         _ => val.to_string(),
     }
+}
+
+/// Strip terminal control characters from a string to prevent escape sequence injection.
+///
+/// Removes C0 control characters (0x00-0x1F) except TAB (0x09) and newline (0x0A),
+/// and C1 control characters (0x80-0x9F). This prevents hostile log data from
+/// injecting ANSI escape sequences (CSI/OSC/DCS) into the terminal.
+pub fn sanitize_control_chars(s: &str) -> String {
+    s.chars()
+        .filter(|&c| {
+            // Allow TAB and newline, strip all other C0 and all C1 control chars
+            if c == '\t' || c == '\n' {
+                true
+            } else {
+                !c.is_control()
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -760,5 +795,90 @@ mod tests {
         let lines: Vec<&str> = output.lines().collect();
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0], "ERROR: fail");
+    }
+
+    // --- Control character sanitization tests ---
+
+    #[test]
+    fn sanitize_strips_escape_sequences() {
+        assert_eq!(
+            sanitize_control_chars("hello\x1b[31mRED\x1b[0m world"),
+            "hello[31mRED[0m world"
+        );
+    }
+
+    #[test]
+    fn sanitize_preserves_tabs() {
+        assert_eq!(sanitize_control_chars("key\tvalue"), "key\tvalue");
+    }
+
+    #[test]
+    fn sanitize_preserves_newlines() {
+        assert_eq!(sanitize_control_chars("line1\nline2"), "line1\nline2");
+    }
+
+    #[test]
+    fn sanitize_strips_null_bytes() {
+        assert_eq!(sanitize_control_chars("hel\x00lo"), "hello");
+    }
+
+    #[test]
+    fn sanitize_strips_c1_controls() {
+        // C1 control range: 0x80-0x9F
+        assert_eq!(sanitize_control_chars("test\u{0090}data"), "testdata");
+        assert_eq!(sanitize_control_chars("test\u{009B}data"), "testdata");
+    }
+
+    #[test]
+    fn sanitize_leaves_normal_text() {
+        assert_eq!(sanitize_control_chars("normal text 123"), "normal text 123");
+    }
+
+    #[test]
+    fn sanitize_strips_bell_and_backspace() {
+        assert_eq!(sanitize_control_chars("a\x07b\x08c"), "abc");
+    }
+
+    #[test]
+    fn render_sanitizes_message_with_escape_codes() {
+        let record = make_record(
+            Some(Level::Info),
+            None,
+            None,
+            Some("evil\x1b[31m red text\x1b[0m"),
+        );
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(false);
+        let args = default_args();
+        let output = render(&record, &tokens, &color, &args);
+        // ESC bytes should be stripped
+        assert!(!output.contains('\x1b'));
+        assert!(output.contains("evil[31m red text[0m"));
+    }
+
+    #[test]
+    fn render_sanitizes_extras_with_escape_codes() {
+        let mut record = make_record(Some(Level::Info), None, None, Some("test"));
+        record
+            .extras
+            .insert("bad".to_string(), json!("\x1b[31mred\x1b[0m"));
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(false);
+        let mut args = default_args();
+        args.compact = true;
+        let output = render(&record, &tokens, &color, &args);
+        assert!(!output.contains('\x1b'));
+    }
+
+    #[test]
+    fn render_sanitizes_stack_trace_with_escape_codes() {
+        let mut record = make_record(Some(Level::Error), None, None, Some("fail"));
+        record.stack_trace = Some("Error\x1b[31m at line 1\x1b[0m".to_string());
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(false);
+        let args = default_args();
+        let output = render(&record, &tokens, &color, &args);
+        assert!(!output.contains('\x1b'));
+        assert!(output.contains("Error[31m at line 1[0m"));
     }
 }

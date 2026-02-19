@@ -2,13 +2,14 @@ use serde_json::Value;
 
 use crate::cli::NonJsonMode;
 use crate::error::JlError;
+use crate::format::sanitize_control_chars;
 
 /// The result of parsing a single input line.
 #[derive(Debug)]
 pub enum ParseResult {
     /// The line was valid JSON.
     Json(Value),
-    /// The line was not valid JSON and should be printed as-is.
+    /// The line was not valid JSON and should be printed through (with sanitization).
     NonJson(String),
     /// The line was not valid JSON and should be skipped.
     Skip,
@@ -18,7 +19,7 @@ pub enum ParseResult {
 ///
 /// - Valid JSON always returns `ParseResult::Json(value)`.
 /// - Invalid JSON behavior depends on `mode`:
-///   - `PrintAsIs` -> `ParseResult::NonJson(line)`
+///   - `PrintAsIs` -> `ParseResult::NonJson(line)` (caller sanitizes before output)
 ///   - `Skip` -> `ParseResult::Skip`
 ///   - `Fail` -> `Err(JlError::Parse(...))`
 pub fn parse_line(line: &str, mode: NonJsonMode) -> Result<ParseResult, JlError> {
@@ -27,7 +28,10 @@ pub fn parse_line(line: &str, mode: NonJsonMode) -> Result<ParseResult, JlError>
         Err(_) => match mode {
             NonJsonMode::PrintAsIs => Ok(ParseResult::NonJson(line.to_string())),
             NonJsonMode::Skip => Ok(ParseResult::Skip),
-            NonJsonMode::Fail => Err(JlError::Parse(format!("not valid JSON: {line}"))),
+            NonJsonMode::Fail => Err(JlError::Parse(format!(
+                "not valid JSON: {}",
+                sanitize_control_chars(line)
+            ))),
         },
     }
 }
