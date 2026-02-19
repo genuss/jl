@@ -187,22 +187,26 @@ pub fn render(
     if !extras.is_empty() {
         if args.expanded {
             // Expanded mode: extras on separate lines, indented
+            let colon = color.style_separator(":");
             for (k, v) in &extras {
                 line.push('\n');
                 line.push_str(&format!(
-                    "  {}: {}",
+                    "  {}{} {}",
                     sanitize_control_chars(k),
+                    colon,
                     sanitize_control_chars(&format_extra_value(v))
                 ));
             }
         } else {
             // Compact mode (default): extras on the same line
+            let eq = color.style_separator("=");
             let extras_str: Vec<String> = extras
                 .iter()
                 .map(|(k, v)| {
                     format!(
-                        "{}={}",
+                        "{}{}{}",
                         sanitize_control_chars(k),
+                        eq,
                         sanitize_control_chars(&format_extra_value(v))
                     )
                 })
@@ -1180,5 +1184,67 @@ mod tests {
         args.logger_format = LoggerFormat::ShortDots;
         let output = test_render(&record, &tokens, &color, &args);
         assert_eq!(output, "[] msg");
+    }
+
+    // --- Colored separator tests ---
+
+    #[test]
+    fn render_compact_extras_colored_equals() {
+        let mut record = make_record(Some(Level::Info), None, None, Some("test"));
+        record.extras.insert("host".to_string(), json!("server1"));
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(true);
+        let mut args = default_args();
+        args.add_fields = Some("host".to_string());
+        let output = test_render(&record, &tokens, &color, &args);
+        // The = sign should contain ANSI dimmed code when color is enabled
+        assert!(output.contains("\x1b[2m"));
+        assert!(output.contains("host"));
+        assert!(output.contains("server1"));
+    }
+
+    #[test]
+    fn render_compact_extras_plain_equals_no_color() {
+        let mut record = make_record(Some(Level::Info), None, None, Some("test"));
+        record.extras.insert("host".to_string(), json!("server1"));
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(false);
+        let mut args = default_args();
+        args.add_fields = Some("host".to_string());
+        let output = test_render(&record, &tokens, &color, &args);
+        // No ANSI codes should appear when color is disabled
+        assert!(!output.contains("\x1b["));
+        assert!(output.contains("host=server1"));
+    }
+
+    #[test]
+    fn render_expanded_extras_colored_colon() {
+        let mut record = make_record(Some(Level::Info), None, None, Some("test"));
+        record.extras.insert("host".to_string(), json!("server1"));
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(true);
+        let mut args = default_args();
+        args.expanded = true;
+        args.add_fields = Some("host".to_string());
+        let output = test_render(&record, &tokens, &color, &args);
+        // The : separator in expanded mode should contain ANSI dimmed code
+        assert!(output.contains("\x1b[2m"));
+        assert!(output.contains("host"));
+        assert!(output.contains("server1"));
+    }
+
+    #[test]
+    fn render_expanded_extras_plain_colon_no_color() {
+        let mut record = make_record(Some(Level::Info), None, None, Some("test"));
+        record.extras.insert("host".to_string(), json!("server1"));
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(false);
+        let mut args = default_args();
+        args.expanded = true;
+        args.add_fields = Some("host".to_string());
+        let output = test_render(&record, &tokens, &color, &args);
+        // No ANSI codes should appear when color is disabled
+        assert!(!output.contains("\x1b["));
+        assert!(output.contains("\n  host: server1"));
     }
 }

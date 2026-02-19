@@ -54,6 +54,17 @@ impl ColorConfig {
         let style = self.level_style(level);
         format!("{}", text.style(style))
     }
+
+    /// Style a separator character (e.g., `=` or `:`) used in extra fields output.
+    ///
+    /// Returns the separator with dimmed styling when color is enabled,
+    /// or plain text when color is disabled.
+    pub fn style_separator(&self, sep: &str) -> String {
+        if !self.enabled {
+            return sep.to_string();
+        }
+        format!("{}", sep.style(Style::new().dimmed()))
+    }
 }
 
 #[cfg(test)]
@@ -145,5 +156,25 @@ mod tests {
         assert!(styled.contains("FATAL"));
         // Should have both bold and red ANSI codes
         assert!(styled.contains("\x1b["));
+    }
+
+    #[test]
+    fn style_separator_no_color_returns_plain() {
+        let config = ColorConfig::with_enabled(false);
+        assert_eq!(config.style_separator("="), "=");
+        assert_eq!(config.style_separator(":"), ":");
+    }
+
+    #[test]
+    fn style_separator_with_color_contains_ansi_dimmed() {
+        let config = ColorConfig::with_enabled(true);
+        let styled_eq = config.style_separator("=");
+        // Dimmed uses ANSI code \x1b[2m
+        assert!(styled_eq.contains("\x1b[2m"));
+        assert!(styled_eq.contains("="));
+
+        let styled_colon = config.style_separator(":");
+        assert!(styled_colon.contains("\x1b[2m"));
+        assert!(styled_colon.contains(":"));
     }
 }

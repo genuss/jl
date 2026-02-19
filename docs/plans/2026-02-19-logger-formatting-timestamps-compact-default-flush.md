@@ -106,11 +106,11 @@ Seven enhancements to the `jl` JSON log pretty-printer:
   - Modify: `src/format.rs`
   - Modify: `src/color.rs`
 
-  - [ ] Add a method to `ColorConfig` for styling the equals sign (e.g., `style_equals(&self) -> String` that returns a dimmed or cyan `=` when color is enabled, plain `=` otherwise)
-  - [ ] In `format.rs::render()`, in the compact mode extras formatting, use the colored `=` instead of a plain string literal
-  - [ ] Also apply to non-compact (expanded) mode's `key: value` - color the `:` separator with the same style for consistency
-  - [ ] Write tests verifying ANSI codes appear in `=` when color is enabled and don't appear when disabled
-  - [ ] Run `cargo test` - must pass before task 7
+  - [x] Add a method to `ColorConfig` for styling the equals sign (e.g., `style_equals(&self) -> String` that returns a dimmed or cyan `=` when color is enabled, plain `=` otherwise)
+  - [x] In `format.rs::render()`, in the compact mode extras formatting, use the colored `=` instead of a plain string literal
+  - [x] Also apply to non-compact (expanded) mode's `key: value` - color the `:` separator with the same style for consistency
+  - [x] Write tests verifying ANSI codes appear in `=` when color is enabled and don't appear when disabled
+  - [x] Run `cargo test` - must pass before task 7
 
 ### Task 7: Flush stdout after every line for reduced buffering
 
