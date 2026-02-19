@@ -70,10 +70,10 @@ Build a Rust CLI tool that reads JSON log lines from stdin or files and renders 
 - Create: `src/parse.rs`
 - Modify: `src/main.rs`
 
-- [ ] Create `src/parse.rs` with `parse_line(line: &str, mode: NonJsonMode) -> Result<ParseResult, JlError>` where `ParseResult` is `Json(serde_json::Value)` | `NonJson(String)` | `Skip`
-- [ ] For `NonJsonMode::PrintAsIs`, non-JSON lines return `NonJson(line)`; for `Skip`, return `Skip`; for `Fail`, return `Err`
-- [ ] Write tests: valid JSON parsing, non-JSON with each mode, empty lines, partial JSON
-- [ ] `cargo test` - must pass
+- [x] Create `src/parse.rs` with `parse_line(line: &str, mode: NonJsonMode) -> Result<ParseResult, JlError>` where `ParseResult` is `Json(serde_json::Value)` | `NonJson(String)` | `Skip`
+- [x] For `NonJsonMode::PrintAsIs`, non-JSON lines return `NonJson(line)`; for `Skip`, return `Skip`; for `Fail`, return `Err`
+- [x] Write tests: valid JSON parsing, non-JSON with each mode, empty lines, partial JSON
+- [x] `cargo test` - must pass
 
 ### Task 5: Schema detection and field mapping
 

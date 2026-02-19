@@ -7,6 +7,8 @@ mod input;
 mod level;
 #[allow(dead_code)]
 mod output;
+#[allow(dead_code)]
+mod parse;
 
 use clap::Parser;
 
