@@ -127,16 +127,16 @@ Seven enhancements to the `jl` JSON log pretty-printer:
 
 ### Task 8: Verify acceptance criteria
 
-  - [ ] Manual test: `echo '{"@timestamp":"2024-01-15T10:30:00Z","level":"INFO","logger_name":"com.example.service.MyHandler","message":"request handled","host":"server1"}' | cargo run -- --add-fields host` and verify:
+  - [x] Manual test: `echo '{"@timestamp":"2024-01-15T10:30:00Z","level":"INFO","logger_name":"com.example.service.MyHandler","message":"request handled","host":"server1"}' | cargo run -- --add-fields host` and verify:
     - Logger shows `c.e.s.MyHandler` (short-dots, default)
     - Timestamp shows time only (default ts-format)
     - No timezone offset in timestamp
     - Compact mode is default (host=server1 on same line)
     - `=` sign is colored (when terminal)
-  - [ ] Manual test: same with `--logger-format as-is --ts-format full --expanded` to verify override behavior
-  - [ ] Manual test with `--logger-length 10` to verify left-cropping
-  - [ ] Run full test suite: `cargo test`
-  - [ ] Run clippy: `cargo clippy`
+  - [x] Manual test: same with `--logger-format as-is --ts-format full --expanded` to verify override behavior
+  - [x] Manual test with `--logger-length 10` to verify left-cropping
+  - [x] Run full test suite: `cargo test`
+  - [x] Run clippy: `cargo clippy`
 
 ### Task 9: Update documentation
 
