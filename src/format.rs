@@ -187,27 +187,23 @@ pub fn render(
     if !extras.is_empty() {
         if args.expanded {
             // Expanded mode: extras on separate lines, indented
-            let colon = color.style_separator(":");
             for (k, v) in &extras {
                 line.push('\n');
                 line.push_str(&format!(
-                    "  {}{} {}",
-                    sanitize_control_chars(k),
-                    colon,
-                    sanitize_control_chars(&format_extra_value(v))
+                    "  {}: {}",
+                    color.style_extra_key(&sanitize_control_chars(k)),
+                    color.style_extra_value(&sanitize_control_chars(&format_extra_value(v)))
                 ));
             }
         } else {
             // Compact mode (default): extras on the same line
-            let eq = color.style_separator("=");
             let extras_str: Vec<String> = extras
                 .iter()
                 .map(|(k, v)| {
                     format!(
-                        "{}{}{}",
-                        sanitize_control_chars(k),
-                        eq,
-                        sanitize_control_chars(&format_extra_value(v))
+                        "{}={}",
+                        color.style_extra_key(&sanitize_control_chars(k)),
+                        color.style_extra_value(&sanitize_control_chars(&format_extra_value(v)))
                     )
                 })
                 .collect();
@@ -421,6 +417,8 @@ mod tests {
             min_level: None,
             raw_json: false,
             expanded: false,
+            key_color: crate::cli::CliColor::Magenta,
+            value_color: crate::cli::CliColor::Cyan,
             tz: "utc".to_string(),
             follow: false,
             output: None,
@@ -1187,10 +1185,10 @@ mod tests {
         assert_eq!(output, "[] msg");
     }
 
-    // --- Colored separator tests ---
+    // --- Colored extra field key/value tests ---
 
     #[test]
-    fn render_compact_extras_colored_equals() {
+    fn render_compact_extras_colored_key_value() {
         let mut record = make_record(Some(Level::Info), None, None, Some("test"));
         record.extras.insert("host".to_string(), json!("server1"));
         let tokens = parse_template("{level}: {message}");
@@ -1198,14 +1196,16 @@ mod tests {
         let mut args = default_args();
         args.add_fields = Some("host".to_string());
         let output = test_render(&record, &tokens, &color, &args);
-        // The = sign should contain ANSI dimmed code when color is enabled
-        assert!(output.contains("\x1b[2m"));
+        // Key should be magenta (\x1b[35m), value should be cyan (\x1b[36m)
+        assert!(output.contains("\x1b[35m"));
+        assert!(output.contains("\x1b[36m"));
         assert!(output.contains("host"));
         assert!(output.contains("server1"));
+        // The = separator itself should NOT have ANSI codes (no dimmed \x1b[2m on it)
     }
 
     #[test]
-    fn render_compact_extras_plain_equals_no_color() {
+    fn render_compact_extras_plain_no_color() {
         let mut record = make_record(Some(Level::Info), None, None, Some("test"));
         record.extras.insert("host".to_string(), json!("server1"));
         let tokens = parse_template("{level}: {message}");
@@ -1219,7 +1219,7 @@ mod tests {
     }
 
     #[test]
-    fn render_expanded_extras_colored_colon() {
+    fn render_expanded_extras_colored_key_value() {
         let mut record = make_record(Some(Level::Info), None, None, Some("test"));
         record.extras.insert("host".to_string(), json!("server1"));
         let tokens = parse_template("{level}: {message}");
@@ -1228,14 +1228,15 @@ mod tests {
         args.expanded = true;
         args.add_fields = Some("host".to_string());
         let output = test_render(&record, &tokens, &color, &args);
-        // The : separator in expanded mode should contain ANSI dimmed code
-        assert!(output.contains("\x1b[2m"));
+        // Key should be magenta (\x1b[35m), value should be cyan (\x1b[36m)
+        assert!(output.contains("\x1b[35m"));
+        assert!(output.contains("\x1b[36m"));
         assert!(output.contains("host"));
         assert!(output.contains("server1"));
     }
 
     #[test]
-    fn render_expanded_extras_plain_colon_no_color() {
+    fn render_expanded_extras_plain_no_color() {
         let mut record = make_record(Some(Level::Info), None, None, Some("test"));
         record.extras.insert("host".to_string(), json!("server1"));
         let tokens = parse_template("{level}: {message}");

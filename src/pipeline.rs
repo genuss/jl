@@ -12,8 +12,10 @@ use crate::schema::Schema;
 pub fn run(args: Args) -> Result<(), JlError> {
     // When writing to a file, disable auto-color since the output is not a terminal
     let color = match (&args.output, args.color) {
-        (Some(_), crate::cli::ColorMode::Auto) => ColorConfig { enabled: false },
-        _ => ColorConfig::new(args.color),
+        (Some(_), crate::cli::ColorMode::Auto) => {
+            ColorConfig::new(crate::cli::ColorMode::Never, args.key_color, args.value_color)
+        }
+        _ => ColorConfig::new(args.color, args.key_color, args.value_color),
     };
     let tokens = format::parse_template(&args.format);
     let render_ctx = format::RenderContext::new(&args, &tokens);
@@ -160,6 +162,8 @@ mod tests {
             min_level: None,
             raw_json: false,
             expanded: false,
+            key_color: crate::cli::CliColor::Magenta,
+            value_color: crate::cli::CliColor::Cyan,
             tz: "utc".to_string(),
             follow: false,
             output: None,

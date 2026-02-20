@@ -64,6 +64,14 @@ pub struct Args {
     #[arg(long)]
     pub expanded: bool,
 
+    /// Color for extra field keys.
+    #[arg(long, value_enum, default_value_t = CliColor::Magenta)]
+    pub key_color: CliColor,
+
+    /// Color for extra field values.
+    #[arg(long, value_enum, default_value_t = CliColor::Cyan)]
+    pub value_color: CliColor,
+
     /// Timezone for displaying timestamps (local, utc, or IANA name).
     #[arg(long, default_value = "local")]
     pub tz: String,
@@ -137,6 +145,19 @@ pub enum SchemaChoice {
     Generic,
 }
 
+/// ANSI color choice for styled output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum CliColor {
+    Black,
+    Red,
+    Green,
+    Yellow,
+    Blue,
+    Magenta,
+    Cyan,
+    White,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -160,6 +181,8 @@ mod tests {
         assert!(args.min_level.is_none());
         assert!(!args.raw_json);
         assert!(!args.expanded);
+        assert_eq!(args.key_color, CliColor::Magenta);
+        assert_eq!(args.value_color, CliColor::Cyan);
         assert_eq!(args.tz, "local");
         assert!(!args.follow);
         assert!(args.output.is_none());

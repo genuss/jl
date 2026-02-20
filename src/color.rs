@@ -1,33 +1,57 @@
 use owo_colors::{OwoColorize, Style};
 
-use crate::cli::ColorMode;
+use crate::cli::{CliColor, ColorMode};
 use crate::level::Level;
 
 /// Configuration for colorized output.
 #[derive(Debug, Clone)]
 pub struct ColorConfig {
     pub enabled: bool,
+    key_style: Style,
+    value_style: Style,
+}
+
+/// Convert a CLI color choice to an owo-colors `Style`.
+fn cli_color_to_style(c: CliColor) -> Style {
+    match c {
+        CliColor::Black => Style::new().black(),
+        CliColor::Red => Style::new().red(),
+        CliColor::Green => Style::new().green(),
+        CliColor::Yellow => Style::new().yellow(),
+        CliColor::Blue => Style::new().blue(),
+        CliColor::Magenta => Style::new().magenta(),
+        CliColor::Cyan => Style::new().cyan(),
+        CliColor::White => Style::new().white(),
+    }
 }
 
 impl ColorConfig {
-    /// Create a new `ColorConfig` from the CLI color mode.
+    /// Create a new `ColorConfig` from the CLI color mode and extra-field color choices.
     ///
     /// For `Auto`, color is enabled only if stdout is a terminal.
     /// For `Always`, color is always on. For `Never`, always off.
-    pub fn new(mode: ColorMode) -> Self {
+    pub fn new(mode: ColorMode, key_color: CliColor, value_color: CliColor) -> Self {
         let enabled = match mode {
             ColorMode::Auto => is_terminal::is_terminal(std::io::stdout()),
             ColorMode::Always => true,
             ColorMode::Never => false,
         };
-        ColorConfig { enabled }
+        ColorConfig {
+            enabled,
+            key_style: cli_color_to_style(key_color),
+            value_style: cli_color_to_style(value_color),
+        }
     }
 
     /// Create a `ColorConfig` with color explicitly enabled or disabled.
-    /// Useful for testing.
+    /// Uses default extra-field colors (magenta key, cyan value). Useful for testing.
     #[cfg(test)]
     pub fn with_enabled(enabled: bool) -> Self {
-        ColorConfig { enabled }
+        ColorConfig {
+            enabled,
+            key_style: cli_color_to_style(CliColor::Magenta),
+            value_style: cli_color_to_style(CliColor::Cyan),
+        }
     }
 
     /// Return the `owo-colors` style for the given log level.
@@ -55,15 +79,20 @@ impl ColorConfig {
         format!("{}", text.style(style))
     }
 
-    /// Style a separator character (e.g., `=` or `:`) used in extra fields output.
-    ///
-    /// Returns the separator with dimmed styling when color is enabled,
-    /// or plain text when color is disabled.
-    pub fn style_separator(&self, sep: &str) -> String {
+    /// Style an extra field key using the configured key color.
+    pub fn style_extra_key(&self, key: &str) -> String {
         if !self.enabled {
-            return sep.to_string();
+            return key.to_string();
         }
-        format!("{}", sep.style(Style::new().dimmed()))
+        format!("{}", key.style(self.key_style))
+    }
+
+    /// Style an extra field value using the configured value color.
+    pub fn style_extra_value(&self, val: &str) -> String {
+        if !self.enabled {
+            return val.to_string();
+        }
+        format!("{}", val.style(self.value_style))
     }
 }
 
@@ -73,13 +102,13 @@ mod tests {
 
     #[test]
     fn color_never_is_disabled() {
-        let config = ColorConfig::new(ColorMode::Never);
+        let config = ColorConfig::new(ColorMode::Never, CliColor::Blue, CliColor::Green);
         assert!(!config.enabled);
     }
 
     #[test]
     fn color_always_is_enabled() {
-        let config = ColorConfig::new(ColorMode::Always);
+        let config = ColorConfig::new(ColorMode::Always, CliColor::Blue, CliColor::Green);
         assert!(config.enabled);
     }
 
@@ -161,22 +190,50 @@ mod tests {
     }
 
     #[test]
-    fn style_separator_no_color_returns_plain() {
+    fn style_extra_key_no_color_returns_plain() {
         let config = ColorConfig::with_enabled(false);
-        assert_eq!(config.style_separator("="), "=");
-        assert_eq!(config.style_separator(":"), ":");
+        assert_eq!(config.style_extra_key("host"), "host");
     }
 
     #[test]
-    fn style_separator_with_color_contains_ansi_dimmed() {
+    fn style_extra_key_with_color_contains_ansi_magenta() {
         let config = ColorConfig::with_enabled(true);
-        let styled_eq = config.style_separator("=");
-        // Dimmed uses ANSI code \x1b[2m
-        assert!(styled_eq.contains("\x1b[2m"));
-        assert!(styled_eq.contains("="));
+        let styled = config.style_extra_key("host");
+        // Magenta uses ANSI code \x1b[35m
+        assert!(styled.contains("\x1b[35m"));
+        assert!(styled.contains("host"));
+    }
 
-        let styled_colon = config.style_separator(":");
-        assert!(styled_colon.contains("\x1b[2m"));
-        assert!(styled_colon.contains(":"));
+    #[test]
+    fn style_extra_value_no_color_returns_plain() {
+        let config = ColorConfig::with_enabled(false);
+        assert_eq!(config.style_extra_value("server1"), "server1");
+    }
+
+    #[test]
+    fn style_extra_value_with_color_contains_ansi_cyan() {
+        let config = ColorConfig::with_enabled(true);
+        let styled = config.style_extra_value("server1");
+        // Cyan uses ANSI code \x1b[36m
+        assert!(styled.contains("\x1b[36m"));
+        assert!(styled.contains("server1"));
+    }
+
+    #[test]
+    fn style_extra_key_custom_color() {
+        let config = ColorConfig::new(ColorMode::Always, CliColor::Cyan, CliColor::Green);
+        let styled = config.style_extra_key("host");
+        // Cyan uses ANSI code \x1b[36m
+        assert!(styled.contains("\x1b[36m"));
+        assert!(styled.contains("host"));
+    }
+
+    #[test]
+    fn style_extra_value_custom_color() {
+        let config = ColorConfig::new(ColorMode::Always, CliColor::Blue, CliColor::Yellow);
+        let styled = config.style_extra_value("server1");
+        // Yellow uses ANSI code \x1b[33m
+        assert!(styled.contains("\x1b[33m"));
+        assert!(styled.contains("server1"));
     }
 }
