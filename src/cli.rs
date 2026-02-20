@@ -380,8 +380,8 @@ mod tests {
     }
 
     #[test]
-    fn completions_default_none() {
-        let args = parse_args(&["jl"]);
-        assert!(args.completions.is_none());
+    fn completions_invalid_value_fails() {
+        let result = Args::try_parse_from(["jl", "--completions", "powershell"]);
+        assert!(result.is_err());
     }
 }

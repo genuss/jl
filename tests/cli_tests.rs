@@ -15,8 +15,8 @@ fn completions_bash_generates_script() {
         .arg("bash")
         .assert()
         .success()
-        .stdout(predicate::str::contains("jl"))
-        .stdout(predicate::str::contains("complete"));
+        .stdout(predicate::str::contains("_jl()"))
+        .stdout(predicate::str::contains("COMPREPLY"));
 }
 
 #[test]
@@ -35,8 +35,7 @@ fn completions_fish_generates_script() {
         .arg("fish")
         .assert()
         .success()
-        .stdout(predicate::str::contains("jl"))
-        .stdout(predicate::str::contains("complete"));
+        .stdout(predicate::str::contains("complete -c jl"));
 }
 
 // --- Logstash JSON piped to stdin, verify output contains expected fields ---

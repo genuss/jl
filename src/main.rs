@@ -20,17 +20,24 @@ fn main() {
 
     if let Some(shell) = args.completions {
         let mut cmd = Args::command();
-        let mut out = std::io::stdout();
+        let mut buf = Vec::new();
         match shell {
             cli::Shell::Bash => {
-                clap_complete::aot::generate(clap_complete::aot::Bash, &mut cmd, "jl", &mut out);
+                clap_complete::aot::generate(clap_complete::aot::Bash, &mut cmd, "jl", &mut buf);
             }
             cli::Shell::Zsh => {
-                clap_complete::aot::generate(clap_complete::aot::Zsh, &mut cmd, "jl", &mut out);
+                clap_complete::aot::generate(clap_complete::aot::Zsh, &mut cmd, "jl", &mut buf);
             }
             cli::Shell::Fish => {
-                clap_complete::aot::generate(clap_complete::aot::Fish, &mut cmd, "jl", &mut out);
+                clap_complete::aot::generate(clap_complete::aot::Fish, &mut cmd, "jl", &mut buf);
             }
+        }
+        if let Err(e) = std::io::Write::write_all(&mut std::io::stdout(), &buf) {
+            if e.kind() == std::io::ErrorKind::BrokenPipe {
+                std::process::exit(0);
+            }
+            eprintln!("jl: {e}");
+            std::process::exit(1);
         }
         return;
     }
