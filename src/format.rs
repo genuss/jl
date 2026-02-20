@@ -422,6 +422,7 @@ mod tests {
             tz: "utc".to_string(),
             follow: false,
             output: None,
+            completions: None,
             files: vec![],
         }
     }

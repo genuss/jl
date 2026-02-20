@@ -25,11 +25,11 @@ Add a `--completions <SHELL>` option to `jl` that generates shell completion scr
 - Modify: `Cargo.toml`
 - Modify: `src/cli.rs`
 
-- [ ] Add `clap_complete = "4.5"` to `[dependencies]` in `Cargo.toml`
-- [ ] Add a `Shell` enum (bash, zsh, fish) deriving `ValueEnum` to `src/cli.rs`
-- [ ] Add `--completions <SHELL>` optional argument to `Args` struct in `src/cli.rs`
-- [ ] Write unit tests: parse `--completions bash`, `--completions zsh`, `--completions fish`, and verify default (None)
-- [ ] Run project test suite - must pass before task 2
+- [x] Add `clap_complete = "4.5"` to `[dependencies]` in `Cargo.toml`
+- [x] Add a `Shell` enum (bash, zsh, fish) deriving `ValueEnum` to `src/cli.rs`
+- [x] Add `--completions <SHELL>` optional argument to `Args` struct in `src/cli.rs`
+- [x] Write unit tests: parse `--completions bash`, `--completions zsh`, `--completions fish`, and verify default (None)
+- [x] Run project test suite - must pass before task 2
 
 ### Task 2: Generate and print completions in main
 

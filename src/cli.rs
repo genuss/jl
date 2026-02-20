@@ -85,6 +85,10 @@ pub struct Args {
     #[arg(short = 'o', long)]
     pub output: Option<PathBuf>,
 
+    /// Generate shell completion script and exit.
+    #[arg(long, value_enum)]
+    pub completions: Option<Shell>,
+
     /// Input file(s) to read. If omitted, reads from stdin.
     #[arg()]
     pub files: Vec<PathBuf>,
@@ -145,6 +149,17 @@ pub enum SchemaChoice {
     Generic,
 }
 
+/// Shell for which to generate completion scripts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum Shell {
+    /// Bash shell completions.
+    Bash,
+    /// Zsh shell completions.
+    Zsh,
+    /// Fish shell completions.
+    Fish,
+}
+
 /// ANSI color choice for styled output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum CliColor {
@@ -186,6 +201,7 @@ mod tests {
         assert_eq!(args.tz, "local");
         assert!(!args.follow);
         assert!(args.output.is_none());
+        assert!(args.completions.is_none());
         assert!(args.files.is_empty());
     }
 
@@ -343,5 +359,29 @@ mod tests {
         assert!(args.expanded);
         assert_eq!(args.output, Some(PathBuf::from("/tmp/out.txt")));
         assert_eq!(args.files, vec![PathBuf::from("input.log")]);
+    }
+
+    #[test]
+    fn completions_bash() {
+        let args = parse_args(&["jl", "--completions", "bash"]);
+        assert_eq!(args.completions, Some(Shell::Bash));
+    }
+
+    #[test]
+    fn completions_zsh() {
+        let args = parse_args(&["jl", "--completions", "zsh"]);
+        assert_eq!(args.completions, Some(Shell::Zsh));
+    }
+
+    #[test]
+    fn completions_fish() {
+        let args = parse_args(&["jl", "--completions", "fish"]);
+        assert_eq!(args.completions, Some(Shell::Fish));
+    }
+
+    #[test]
+    fn completions_default_none() {
+        let args = parse_args(&["jl"]);
+        assert!(args.completions.is_none());
     }
 }
