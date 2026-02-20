@@ -86,7 +86,7 @@ pub struct Args {
     pub output: Option<PathBuf>,
 
     /// Generate shell completion script and exit.
-    #[arg(long, value_enum)]
+    #[arg(long, value_enum, exclusive = true)]
     pub completions: Option<Shell>,
 
     /// Input file(s) to read. If omitted, reads from stdin.
@@ -382,6 +382,15 @@ mod tests {
     #[test]
     fn completions_invalid_value_fails() {
         let result = Args::try_parse_from(["jl", "--completions", "powershell"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn completions_exclusive_rejects_other_args() {
+        let result = Args::try_parse_from(["jl", "--completions", "bash", "-o", "/tmp/out"]);
+        assert!(result.is_err());
+
+        let result = Args::try_parse_from(["jl", "--completions", "bash", "input.log"]);
         assert!(result.is_err());
     }
 }
