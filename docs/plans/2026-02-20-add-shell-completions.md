@@ -37,10 +37,10 @@ Add a `--completions <SHELL>` option to `jl` that generates shell completion scr
 - Modify: `src/main.rs`
 - Modify: `tests/cli_tests.rs`
 
-- [ ] In `main()`, after parsing args, check if `args.completions` is `Some(shell)`
-- [ ] If set, use `clap_complete::generate()` to write the completion script for the requested shell to stdout, then exit 0
-- [ ] Write an integration test in `tests/cli_tests.rs` that runs `jl --completions bash` and verifies stdout contains expected completion content (e.g., contains the string "jl")
-- [ ] Run project test suite - must pass before task 3
+- [x] In `main()`, after parsing args, check if `args.completions` is `Some(shell)`
+- [x] If set, use `clap_complete::generate()` to write the completion script for the requested shell to stdout, then exit 0
+- [x] Write an integration test in `tests/cli_tests.rs` that runs `jl --completions bash` and verifies stdout contains expected completion content (e.g., contains the string "jl")
+- [x] Run project test suite - must pass before task 3
 
 ### Task 3: Verify acceptance criteria
 

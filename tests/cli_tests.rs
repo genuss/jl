@@ -7,6 +7,38 @@ fn jl() -> Command {
     Command::cargo_bin("jl").unwrap()
 }
 
+// --- Shell completions ---
+
+#[test]
+fn completions_bash_generates_script() {
+    jl().arg("--completions")
+        .arg("bash")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("jl"))
+        .stdout(predicate::str::contains("complete"));
+}
+
+#[test]
+fn completions_zsh_generates_script() {
+    jl().arg("--completions")
+        .arg("zsh")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("jl"))
+        .stdout(predicate::str::contains("compdef"));
+}
+
+#[test]
+fn completions_fish_generates_script() {
+    jl().arg("--completions")
+        .arg("fish")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("jl"))
+        .stdout(predicate::str::contains("complete"));
+}
+
 // --- Logstash JSON piped to stdin, verify output contains expected fields ---
 
 #[test]
