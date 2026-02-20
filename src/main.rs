@@ -32,7 +32,10 @@ fn main() {
                 clap_complete::aot::generate(clap_complete::aot::Fish, &mut cmd, "jl", &mut buf);
             }
         }
-        if let Err(e) = std::io::Write::write_all(&mut std::io::stdout(), &buf) {
+        let mut stdout = std::io::stdout();
+        if let Err(e) = std::io::Write::write_all(&mut stdout, &buf)
+            .and_then(|_| std::io::Write::flush(&mut stdout))
+        {
             if e.kind() == std::io::ErrorKind::BrokenPipe {
                 std::process::exit(0);
             }
