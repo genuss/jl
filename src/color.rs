@@ -152,10 +152,12 @@ mod tests {
     fn level_style_enabled_fatal_is_bold_red() {
         let config = ColorConfig::with_enabled(true);
         let styled = config.style_level(&Level::Fatal);
-        // Bold uses \x1b[1m, red uses \x1b[31m
         assert!(styled.contains("FATAL"));
-        // Should have both bold and red ANSI codes
-        assert!(styled.contains("\x1b["));
+        // owo_colors may combine bold+red as \x1b[1;31m or emit them separately
+        let has_bold = styled.contains("\x1b[1m") || styled.contains(";1m") || styled.contains("[1;");
+        let has_red = styled.contains("\x1b[31m") || styled.contains(";31m") || styled.contains("[31;");
+        assert!(has_bold, "FATAL should be bold, got: {styled:?}");
+        assert!(has_red, "FATAL should be red, got: {styled:?}");
     }
 
     #[test]

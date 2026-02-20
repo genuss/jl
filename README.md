@@ -52,8 +52,8 @@ jl app.log error.log
 | `--non-json <MODE>` | Non-JSON handling: `print-as-is`, `skip`, `fail` | `print-as-is` |
 | `--schema <SCHEMA>` | Force schema: `auto`, `logstash`, `logrus`, `bunyan`, `generic` | `auto` |
 | `--logger-format <FORMAT>` | Logger name format: `short-dots` (abbreviate segments), `as-is` | `short-dots` |
-| `--logger-length <N>` | Maximum display length for logger names (crops from left) | `30` |
-| `--ts-format <FORMAT>` | Timestamp format: `time` (HH:MM:SS.mmm), `full` (datetime) | `time` |
+| `--logger-length <N>` | Maximum display length for logger names (crops from left, `0` for unlimited) | `30` |
+| `--ts-format <FORMAT>` | Timestamp format: `time` (HH:MM:SS.mmm), `full` (datetime without timezone offset) | `time` |
 | `--min-level <LEVEL>` | Minimum log level to display | (none) |
 | `--tz <TIMEZONE>` | Timezone: `local`, `utc`, or IANA name | `local` |
 | `--add-fields <FIELDS>` | Comma-separated extra fields to include | (none) |

@@ -274,6 +274,8 @@ fn ts_format_time_via_cli() {
     let output = jl()
         .arg("--color")
         .arg("never")
+        .arg("--ts-format")
+        .arg("time")
         .arg("--tz")
         .arg("utc")
         .write_stdin(input)
