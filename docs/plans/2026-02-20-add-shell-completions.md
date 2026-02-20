@@ -44,9 +44,9 @@ Add a `--completions <SHELL>` option to `jl` that generates shell completion scr
 
 ### Task 3: Verify acceptance criteria
 
-- [ ] Manual test: run `jl --completions bash`, `jl --completions zsh`, `jl --completions fish` and verify each produces valid shell-specific output
-- [ ] Run full test suite: `cargo test`
-- [ ] Run linter: `cargo clippy`
+- [x] Manual test: run `jl --completions bash`, `jl --completions zsh`, `jl --completions fish` and verify each produces valid shell-specific output
+- [x] Run full test suite: `cargo test`
+- [x] Run linter: `cargo clippy`
 
 ### Task 4: Update documentation
 
