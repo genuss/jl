@@ -13,7 +13,7 @@ Rust CLI tool for pretty-printing JSON log lines. Binary name: `jl`.
 
 ## Project Structure
 
-- `src/main.rs` - Entry point, delegates to `pipeline::run()`
+- `src/main.rs` - Entry point, handles `--completions` (shell completion generation via `clap_complete`) then delegates to `pipeline::run()`
 - `src/cli.rs` - CLI argument definitions using clap derive macros with `ValueEnum` enums
 - `src/pipeline.rs` - Main processing pipeline: read -> parse -> extract -> filter -> render -> write
 - `src/parse.rs` - JSON line parsing, non-JSON handling

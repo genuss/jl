@@ -62,6 +62,7 @@ jl app.log error.log
 | `--raw-json` | Output records as raw JSON | off |
 | `--follow` | Follow input file, waiting for new data | off |
 | `-o, --output <FILE>` | Write output to a file instead of stdout | (stdout) |
+| `--completions <SHELL>` | Generate shell completion script and exit (`bash`, `zsh`, `fish`) | (none) |
 
 ### Log Levels
 
@@ -160,6 +161,23 @@ Full logger names and datetime timestamps:
 
 ```sh
 cat app.log | jl --logger-format as-is --ts-format full
+```
+
+## Shell Completions
+
+Generate completion scripts for your shell:
+
+```sh
+# Bash (add to ~/.bashrc)
+jl --completions bash > /etc/bash_completion.d/jl
+# or
+jl --completions bash >> ~/.bashrc
+
+# Zsh (add to ~/.zshrc or place in fpath)
+jl --completions zsh > ~/.zsh/completions/_jl
+
+# Fish
+jl --completions fish > ~/.config/fish/completions/jl.fish
 ```
 
 ## License
