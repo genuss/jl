@@ -212,9 +212,10 @@ pub fn render(
         }
     }
 
-    // Append stack trace if present and not omitted
+    // Append stack trace if present, not omitted, and allowed by add_fields
     if let Some(ref st) = record.stack_trace
         && !ctx.omit_fields.contains("stack_trace")
+        && (ctx.add_fields.is_empty() || ctx.add_fields.contains("stack_trace"))
     {
         append_stack_trace(&mut line, st, color);
     }
@@ -896,7 +897,7 @@ mod tests {
         let tokens = parse_template("{level}: {message}");
         let color = ColorConfig::with_enabled(false);
         let mut args = default_args();
-        args.add_fields = Some("host".to_string());
+        args.add_fields = Some("host,stack_trace".to_string());
         let output = test_render(&record, &tokens, &color, &args);
 
         // Extras should be on the same line (compact is default), stack trace on new lines
@@ -905,6 +906,24 @@ mod tests {
         assert!(lines[0].contains("host=server1"));
         assert_eq!(lines[1], "    Error");
         assert_eq!(lines[2], "    \tat line 1");
+    }
+
+    #[test]
+    fn stack_trace_excluded_when_not_in_add_fields() {
+        let mut record = make_record(Some(Level::Error), None, None, Some("fail"));
+        record.stack_trace = Some("Error\n\tat line 1".to_string());
+        record.extras.insert("host".to_string(), json!("server1"));
+        let tokens = parse_template("{level}: {message}");
+        let color = ColorConfig::with_enabled(false);
+        let mut args = default_args();
+        args.add_fields = Some("host".to_string());
+        let output = test_render(&record, &tokens, &color, &args);
+
+        let lines: Vec<&str> = output.lines().collect();
+        assert_eq!(lines.len(), 1);
+        assert!(lines[0].contains("ERROR: fail"));
+        assert!(lines[0].contains("host=server1"));
+        assert!(!output.contains("Error\n"), "stack_trace should not appear when not in add_fields");
     }
 
     #[test]
